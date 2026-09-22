@@ -1,0 +1,39 @@
+"""
+LexMatter AI — FastAPI Main Application Server
+"""
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from backend.app.core.config import settings
+from backend.app.api.v1.documents import router as documents_router
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    description="Agentic Legal-Matter Intelligence Platform API",
+    version="0.1.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+# Configure CORS for React frontend integration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Register API Router
+app.include_router(documents_router, prefix=settings.API_V1_STR)
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for container monitoring."""
+    return {
+        "status": "healthy",
+        "app": settings.PROJECT_NAME,
+        "environment": settings.ENVIRONMENT,
+    }
