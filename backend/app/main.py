@@ -10,6 +10,7 @@ from backend.app.api.v1.documents import router as documents_router
 from backend.app.api.v1.extraction import router as extraction_router
 from backend.app.api.v1.retrieval import router as retrieval_router
 from backend.app.api.v1.requirements import router as requirements_router
+from backend.app.api.v1.conflicts import router as conflicts_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -33,6 +34,7 @@ app.include_router(documents_router, prefix=settings.API_V1_STR)
 app.include_router(extraction_router, prefix=settings.API_V1_STR)
 app.include_router(retrieval_router, prefix=settings.API_V1_STR)
 app.include_router(requirements_router, prefix=settings.API_V1_STR)
+app.include_router(conflicts_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/health")
