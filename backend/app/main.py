@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.core.config import settings
 from backend.app.api.v1.documents import router as documents_router
 from backend.app.api.v1.extraction import router as extraction_router
+from backend.app.api.v1.retrieval import router as retrieval_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -29,6 +30,7 @@ app.add_middleware(
 # Register API Routers
 app.include_router(documents_router, prefix=settings.API_V1_STR)
 app.include_router(extraction_router, prefix=settings.API_V1_STR)
+app.include_router(retrieval_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/health")
