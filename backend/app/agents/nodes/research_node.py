@@ -1,0 +1,82 @@
+"""
+LexMatter AI — Research Agent Node
+Phase 9: LangGraph Multi-Agent Orchestration
+
+Queries primary legal authorities and performs secondary hybrid retrieval across the matter corpus
+to investigate flagged EvidenceGap items.
+"""
+
+from typing import Dict, Any
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
+from app.agents.state import MatterAnalysisState
+from app.services.hybrid_search_service import hybrid_search_service
+from app.models.analysis import EvidenceGap
+from app.models.audit import AgentExecutionLog
+from app.core.id_generator import generate_id
+
+
+async def research_agent_node(state: MatterAnalysisState, db: AsyncSession) -> Dict[str, Any]:
+    """
+    Research Agent node execution.
+    Inspects flagged EvidenceGaps, runs hybrid search to find potential candidate evidence,
+    updates gap records if findings emerge, and sets research_completed = True.
+    """
+    iteration = state.get("iteration_count", 0)
+    gap_ids = state.get("identified_gap_ids", [])
+
+    gaps_researched = 0
+    spans_discovered = 0
+
+    if gap_ids:
+        # Fetch potential gaps
+        stmt = select(EvidenceGap).where(EvidenceGap.id.in_(gap_ids), EvidenceGap.status == "POTENTIAL_GAP")
+        res = await db.execute(stmt)
+        potential_gaps = res.scalars().all()
+
+        for gap in potential_gaps:
+            gaps_researched += 1
+            # Build targeted research query from gap dimension name
+            search_query = f"{gap.dimension.replace('_', ' ')} evidence support"
+            
+            # Execute hybrid search across matter corpus
+            search_results = await hybrid_search_service.search_matter_spans(
+                db,
+                matter_id=state["matter_id"],
+                query_text=search_query,
+                top_k=3,
+            )
+
+            if search_results and search_results[0].score >= 0.70:
+                top_hit = search_results[0]
+                spans_discovered += 1
+                gap.observation += (
+                    f" [Research Note: Potential supporting span discovered ({top_hit.span_id}) "
+                    f"with relevance score {top_hit.score:.2f}]."
+                )
+
+        await db.flush()
+
+    # Audit logging
+    log_id = generate_id("log")
+    audit_log = AgentExecutionLog(
+        id=log_id,
+        matter_id=state["matter_id"],
+        agent_name="ResearchAgent",
+        action="RESEARCH_GAPS",
+        input_state={"gap_count": len(gap_ids), "iteration": iteration},
+        output_state={"gaps_researched": gaps_researched, "spans_discovered": spans_discovered},
+        execution_status="SUCCESS",
+    )
+    db.add(audit_log)
+    await db.flush()
+
+    audit_ids = list(state.get("audit_log_ids", [])) + [log_id]
+
+    return {
+        "research_completed": True,
+        "current_step": "research_agent",
+        "iteration_count": iteration + 1,
+        "audit_log_ids": audit_ids,
+    }
