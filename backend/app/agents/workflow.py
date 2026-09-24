@@ -14,13 +14,13 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.runnables import RunnableConfig
 
-from app.agents.state import MatterAnalysisState, create_initial_matter_state
-from app.agents.supervisor import route_next, supervisor_node
-from app.agents.nodes.evidence_node import evidence_analyst_node
-from app.agents.nodes.consistency_node import consistency_analyst_node
-from app.agents.nodes.research_node import research_agent_node
-from app.agents.nodes.verification_node import verification_agent_node
-from app.models.legal import RequirementVersion, RequirementApplicability
+from backend.app.agents.state import MatterAnalysisState, create_initial_matter_state
+from backend.app.agents.supervisor import route_next, supervisor_node
+from backend.app.agents.nodes.evidence_node import evidence_analyst_node
+from backend.app.agents.nodes.consistency_node import consistency_analyst_node
+from backend.app.agents.nodes.research_node import research_agent_node
+from backend.app.agents.nodes.verification_node import verification_agent_node
+from backend.app.models.legal import RequirementVersion, RequirementApplicability
 
 
 # --- Node Wrappers to Inject AsyncSession from RunnableConfig ---

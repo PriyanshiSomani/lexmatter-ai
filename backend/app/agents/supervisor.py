@@ -6,7 +6,7 @@ Provides deterministic Python routing logic to direct execution across specialis
 """
 
 from typing import Dict, Any
-from app.agents.state import MatterAnalysisState
+from backend.app.agents.state import MatterAnalysisState
 
 
 def route_next(state: MatterAnalysisState) -> str:

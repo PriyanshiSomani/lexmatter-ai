@@ -10,11 +10,11 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.source import Document, DocumentChunk, SourceSpan
-from app.models.extraction import SourceAssertion
-from app.models.knowledge import CanonicalFact, Conflict
-from app.models.analysis import EvidenceMapping, EvidenceGap
-from app.schemas.audit import (
+from backend.app.models.source import Document, SourceSpan
+from backend.app.models.extraction import SourceAssertion
+from backend.app.models.knowledge import CanonicalFact, Conflict
+from backend.app.models.analysis import EvidenceMapping, EvidenceGap
+from backend.app.schemas.audit import (
     ConfidenceMetricsSchema,
     OperationalTier,
     LineageNode,

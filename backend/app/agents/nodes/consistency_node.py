@@ -9,11 +9,11 @@ from typing import Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.agents.state import MatterAnalysisState
-from app.services.consistency_service import consistency_service
-from app.models.knowledge import Conflict
-from app.models.audit import AgentExecutionLog
-from app.core.id_generator import generate_id
+from backend.app.agents.state import MatterAnalysisState
+from backend.app.services.consistency_service import consistency_service
+from backend.app.models.knowledge import Conflict
+from backend.app.models.audit import AgentRun
+from backend.app.core.id_generator import generate_id
 
 
 async def consistency_analyst_node(state: MatterAnalysisState, db: AsyncSession) -> Dict[str, Any]:
@@ -46,18 +46,18 @@ async def consistency_analyst_node(state: MatterAnalysisState, db: AsyncSession)
 
     # Audit logging
     log_id = generate_id("log")
-    audit_log = AgentExecutionLog(
+    audit_log = AgentRun(
         id=log_id,
         matter_id=state["matter_id"],
         agent_name="ConsistencyAnalyst",
-        action="ANALYZE_CONSISTENCY",
-        input_state={"iteration": iteration},
-        output_state={
+        status="COMPLETED",
+        input_payload={"iteration": iteration},
+        output_payload={
             "metrics": result_metrics,
             "total_conflicts": len(conflict_ids),
             "high_severity_count": len(high_severity_conflicts),
         },
-        execution_status="SUCCESS",
+        model_used="rule_engine",
     )
     db.add(audit_log)
     await db.flush()

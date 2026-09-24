@@ -11,12 +11,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import fitz  # PyMuPDF for PDF export
 
-from app.core.id_generator import generate_id
-from app.models.legal import Matter, RequirementApplicability, RequirementVersion, Requirement
-from app.models.analysis import EvidenceMapping, Conflict, EvidenceGap
-from app.models.extraction import SourceAssertion
-from app.models.source import SourceSpan, Document
-from app.schemas.report import BriefingReportSchema, ReportSection, CitationItem
+from backend.app.core.id_generator import generate_id
+from backend.app.models.legal import RequirementApplicability, RequirementVersion, Requirement
+from backend.app.models.analysis import EvidenceMapping, EvidenceGap
+from backend.app.models.knowledge import Conflict
+from backend.app.models.extraction import SourceAssertion
+from backend.app.models.source import Matter, SourceSpan, Document
+from backend.app.schemas.report import BriefingReportSchema, ReportSection, CitationItem
 
 
 class ReportService:

@@ -44,7 +44,7 @@ class RequirementApplicabilitySchema(BaseModel):
     id: str
     matter_id: str
     requirement_version_id: str
-    status: str = Field(description="NOT_EVALUATED, EVIDENCE_LOCATED, PARTIAL_SUPPORT, CONFLICT_DETECTED, POTENTIAL_GAP, HUMAN_VERIFIED")
+    status: str = Field(default="NOT_EVALUATED", description="NOT_EVALUATED, EVIDENCE_LOCATED, PARTIAL_SUPPORT, CONFLICT_DETECTED, POTENTIAL_GAP, HUMAN_VERIFIED")
     notes: Optional[str] = None
     requirement_code: Optional[str] = None
     requirement_title: Optional[str] = None

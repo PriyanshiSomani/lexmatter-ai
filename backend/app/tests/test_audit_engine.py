@@ -2,8 +2,8 @@
 LexMatter AI — Phase 11 Audit & Provenance Verification Unit Tests
 """
 
-from app.schemas.audit import OperationalTier
-from app.services.audit_service import audit_service
+from backend.app.schemas.audit import OperationalTier
+from backend.app.services.audit_service import audit_service
 
 
 def test_calibrated_confidence_weighted_average():

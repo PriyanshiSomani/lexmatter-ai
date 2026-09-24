@@ -3,7 +3,6 @@ Prefix-typed ULID identifier generator for LexMatter AI domain models.
 Example: generate_id("mat") -> "mat_01J8K3M90A1B2C3D4E5F6G7H8J"
 """
 
-import time
 import ulid
 
 
@@ -13,7 +12,11 @@ def generate_id(prefix: str) -> str:
     ULIDs are 128-bit identifiers formatted as 26 Crockford Base32 characters.
     They are sortable by timestamp and contain 80 bits of cryptographic randomness.
     """
-    return f"{prefix}_{ulid.new().str}"
+    try:
+        ulid_str = str(ulid.ULID())
+    except Exception:
+        ulid_str = str(ulid.new())
+    return f"{prefix}_{ulid_str}"
 
 
 # Standard typed prefix constants

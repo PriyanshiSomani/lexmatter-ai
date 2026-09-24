@@ -9,11 +9,11 @@ from typing import Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.agents.state import MatterAnalysisState
-from app.services.evidence_service import evidence_service
-from app.models.analysis import EvidenceMapping, EvidenceGap
-from app.models.audit import AgentExecutionLog
-from app.core.id_generator import generate_id
+from backend.app.agents.state import MatterAnalysisState
+from backend.app.services.evidence_service import evidence_service
+from backend.app.models.analysis import EvidenceMapping, EvidenceGap
+from backend.app.models.audit import AgentRun
+from backend.app.core.id_generator import generate_id
 
 
 async def evidence_analyst_node(state: MatterAnalysisState, db: AsyncSession) -> Dict[str, Any]:
@@ -53,14 +53,14 @@ async def evidence_analyst_node(state: MatterAnalysisState, db: AsyncSession) ->
 
     # Audit logging
     log_id = generate_id("log")
-    audit_log = AgentExecutionLog(
+    audit_log = AgentRun(
         id=log_id,
         matter_id=state["matter_id"],
         agent_name="EvidenceAnalyst",
-        action="EVALUATE_DIMENSION",
-        input_state={"current_dimension": current_dim, "iteration": iteration},
-        output_state={"eval_result": eval_res, "mappings_count": len(new_mapped_ids), "gaps_count": len(new_gap_ids)},
-        execution_status="SUCCESS",
+        status="COMPLETED",
+        input_payload={"current_dimension": current_dim, "iteration": iteration},
+        output_payload={"eval_result": eval_res, "mappings_count": len(new_mapped_ids), "gaps_count": len(new_gap_ids)},
+        model_used="rule_engine",
     )
     db.add(audit_log)
     await db.flush()

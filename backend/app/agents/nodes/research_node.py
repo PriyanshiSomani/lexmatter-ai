@@ -10,11 +10,11 @@ from typing import Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.agents.state import MatterAnalysisState
-from app.services.hybrid_search_service import hybrid_search_service
-from app.models.analysis import EvidenceGap
-from app.models.audit import AgentExecutionLog
-from app.core.id_generator import generate_id
+from backend.app.agents.state import MatterAnalysisState
+from backend.app.services.hybrid_search_service import hybrid_search_service
+from backend.app.models.analysis import EvidenceGap
+from backend.app.models.audit import AgentRun
+from backend.app.core.id_generator import generate_id
 
 
 async def research_agent_node(state: MatterAnalysisState, db: AsyncSession) -> Dict[str, Any]:
@@ -60,14 +60,14 @@ async def research_agent_node(state: MatterAnalysisState, db: AsyncSession) -> D
 
     # Audit logging
     log_id = generate_id("log")
-    audit_log = AgentExecutionLog(
+    audit_log = AgentRun(
         id=log_id,
         matter_id=state["matter_id"],
         agent_name="ResearchAgent",
-        action="RESEARCH_GAPS",
-        input_state={"gap_count": len(gap_ids), "iteration": iteration},
-        output_state={"gaps_researched": gaps_researched, "spans_discovered": spans_discovered},
-        execution_status="SUCCESS",
+        status="COMPLETED",
+        input_payload={"gap_count": len(gap_ids), "iteration": iteration},
+        output_payload={"gaps_researched": gaps_researched, "spans_discovered": spans_discovered},
+        model_used="rule_engine",
     )
     db.add(audit_log)
     await db.flush()

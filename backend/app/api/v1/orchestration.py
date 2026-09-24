@@ -8,9 +8,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.db import get_db
-from app.models.audit import AgentExecutionLog
-from app.agents.workflow import run_matter_analysis_workflow
+from backend.app.core.db import get_db
+from backend.app.models.audit import AgentRun
+from backend.app.agents.workflow import run_matter_analysis_workflow
 
 router = APIRouter(tags=["Multi-Agent Orchestration"])
 
@@ -66,9 +66,9 @@ async def get_matter_agent_logs(
     """
     try:
         stmt = (
-            select(AgentExecutionLog)
-            .where(AgentExecutionLog.matter_id == matter_id)
-            .order_by(AgentExecutionLog.timestamp.asc())
+            select(AgentRun)
+            .where(AgentRun.matter_id == matter_id)
+            .order_by(AgentRun.started_at.asc())
         )
         res = await db.execute(stmt)
         logs = res.scalars().all()
@@ -78,11 +78,10 @@ async def get_matter_agent_logs(
                 "id": log.id,
                 "matter_id": log.matter_id,
                 "agent_name": log.agent_name,
-                "action": log.action,
-                "input_state": log.input_state,
-                "output_state": log.output_state,
-                "execution_status": log.execution_status,
-                "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+                "status": log.status,
+                "input_payload": log.input_payload,
+                "output_payload": log.output_payload,
+                "started_at": log.started_at.isoformat() if log.started_at else None,
             }
             for log in logs
         ]

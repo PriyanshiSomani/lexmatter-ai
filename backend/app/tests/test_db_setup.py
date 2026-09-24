@@ -44,6 +44,7 @@ def test_id_generator():
 def test_model_instantiation():
     """Verify model instances can be created with defaults and foreign key relationships."""
     matter = Matter(
+        id=generate_id(PREFIX_MATTER),
         title="Acme Corp - L1B Petition",
         matter_type="IMMIGRATION",
         case_type="L1B",
@@ -53,6 +54,7 @@ def test_model_instantiation():
     assert matter.matter_type == "IMMIGRATION"
 
     doc = Document(
+        id=generate_id(PREFIX_DOCUMENT),
         matter_id=matter.id,
         title="Support_Letter.pdf",
         document_type="PETITION_LETTER",
@@ -63,6 +65,7 @@ def test_model_instantiation():
     # Dummy 768-dimensional embedding
     dummy_vector = [0.01] * 768
     span = SourceSpan(
+        id=generate_id(PREFIX_SOURCE_SPAN),
         page_id="page_dummy",
         start_char=100,
         end_char=250,

@@ -2,8 +2,8 @@
 LexMatter AI — Phase 9 Multi-Agent Orchestration Unit Tests
 """
 
-from app.agents.state import create_initial_matter_state, MatterAnalysisState
-from app.agents.supervisor import route_next
+from backend.app.agents.state import create_initial_matter_state, MatterAnalysisState
+from backend.app.agents.supervisor import route_next
 
 
 def test_initial_state_creation():

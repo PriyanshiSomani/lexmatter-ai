@@ -3,8 +3,8 @@ LexMatter AI — Phase 10 Briefing & Report Generation Unit Tests
 """
 
 from datetime import datetime
-from app.schemas.report import BriefingReportSchema, ReportSection, CitationItem, ReportExportFormat
-from app.services.report_service import report_service
+from backend.app.schemas.report import BriefingReportSchema, ReportSection, CitationItem, ReportExportFormat
+from backend.app.services.report_service import report_service
 
 
 def test_report_schema_defaults_and_disclaimer():

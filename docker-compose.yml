@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Database with pgvector Extension
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: lexmatter-db
+    restart: always
+    environment:
+      POSTGRES_DB: lexmatter_db
+      POSTGRES_USER: lexmatter_user
+      POSTGRES_PASSWORD: lexmatter_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lexmatter_user -d lexmatter_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. FastAPI Backend Application Server
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lexmatter-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://lexmatter_user:lexmatter_password@db:5432/lexmatter_db
+      - ENVIRONMENT=production
+      - API_V1_STR=/api/v1
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # 3. Next.js Frontend Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: lexmatter-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

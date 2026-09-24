@@ -14,7 +14,7 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship as orm_relationship
 
 from backend.app.core.db import Base
 from backend.app.core.id_generator import (
@@ -46,12 +46,13 @@ class EvidenceMapping(Base):
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
 
     # Relationships
-    matter: Mapped["Matter"] = relationship("Matter", back_populates="evidence_mappings")
-    source_assertion: Mapped["SourceAssertion"] = relationship("SourceAssertion", back_populates="evidence_mappings")
-    requirement_version: Mapped["RequirementVersion"] = relationship("RequirementVersion", back_populates="evidence_mappings")
+    matter: Mapped["Matter"] = orm_relationship("Matter", back_populates="evidence_mappings")
+    source_assertion: Mapped["SourceAssertion"] = orm_relationship("SourceAssertion", back_populates="evidence_mappings")
+    requirement_version: Mapped["RequirementVersion"] = orm_relationship("RequirementVersion", back_populates="evidence_mappings")
 
     __table_args__ = (
         Index("idx_evm_lookup", "matter_id", "requirement_version_id", "relationship"),
+        {"extend_existing": True},
     )
 
 
@@ -76,11 +77,12 @@ class Finding(Base):
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
 
     # Relationships
-    matter: Mapped["Matter"] = relationship("Matter", back_populates="findings")
+    matter: Mapped["Matter"] = orm_relationship("Matter", back_populates="findings")
 
     __table_args__ = (
         Index("idx_findings_matter_status", "matter_id", "status", "severity"),
         Index("idx_findings_spans_gin", "supporting_span_ids", postgresql_using="gin"),
+        {"extend_existing": True},
     )
 
 
@@ -103,12 +105,13 @@ class EvidenceGap(Base):
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
 
     # Relationships
-    matter: Mapped["Matter"] = relationship("Matter", back_populates="evidence_gaps")
-    requirement_version: Mapped["RequirementVersion"] = relationship("RequirementVersion", back_populates="evidence_gaps")
-    research_issues: Mapped[List["ResearchIssue"]] = relationship("ResearchIssue", back_populates="evidence_gap")
+    matter: Mapped["Matter"] = orm_relationship("Matter", back_populates="evidence_gaps")
+    requirement_version: Mapped["RequirementVersion"] = orm_relationship("RequirementVersion", back_populates="evidence_gaps")
+    research_issues: Mapped[List["ResearchIssue"]] = orm_relationship("ResearchIssue", back_populates="evidence_gap")
 
     __table_args__ = (
         Index("idx_gaps_status", "matter_id", "status"),
+        {"extend_existing": True},
     )
 
 
@@ -132,9 +135,10 @@ class ResearchIssue(Base):
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
 
     # Relationships
-    matter: Mapped["Matter"] = relationship("Matter", back_populates="research_issues")
-    evidence_gap: Mapped[Optional["EvidenceGap"]] = relationship("EvidenceGap", back_populates="research_issues")
+    matter: Mapped["Matter"] = orm_relationship("Matter", back_populates="research_issues")
+    evidence_gap: Mapped[Optional["EvidenceGap"]] = orm_relationship("EvidenceGap", back_populates="research_issues")
 
     __table_args__ = (
         Index("idx_riss_status", "matter_id", "status"),
+        {"extend_existing": True},
     )
