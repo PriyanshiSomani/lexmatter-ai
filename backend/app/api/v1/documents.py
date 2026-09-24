@@ -6,6 +6,7 @@ from typing import List
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.db import get_db
@@ -72,6 +73,7 @@ async def list_matter_documents(
     try:
         stmt = (
             select(Document)
+            .options(selectinload(Document.versions))
             .where(Document.matter_id == matter_id)
             .order_by(Document.created_at.desc())
         )
@@ -87,7 +89,7 @@ async def list_matter_documents(
                 "file_type": doc.title.split(".")[-1].upper() if "." in doc.title else "PDF",
                 "document_type": doc.document_type,
                 "status": doc.status,
-                "chunk_count": len(doc.versions[0].pages[0].source_spans) if doc.versions and doc.versions[0].pages else 0,
+                "chunk_count": doc.versions[0].page_count if doc.versions else 0,
                 "created_at": doc.created_at.isoformat() if doc.created_at else "",
             })
         return response
@@ -108,6 +110,7 @@ async def get_document_source_spans(
     try:
         stmt = (
             select(SourceSpan)
+            .options(selectinload(SourceSpan.page))
             .join(Page, SourceSpan.page_id == Page.id)
             .join(DocumentVersion, Page.document_version_id == DocumentVersion.id)
             .where(DocumentVersion.document_id == document_id)
