@@ -14,6 +14,7 @@ from backend.app.api.v1.conflicts import router as conflicts_router
 from backend.app.api.v1.evidence import router as evidence_router
 from backend.app.api.v1.orchestration import router as orchestration_router
 from backend.app.api.v1.reports import router as reports_router
+from backend.app.api.v1.audit import router as audit_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -41,6 +42,7 @@ app.include_router(conflicts_router, prefix=settings.API_V1_STR)
 app.include_router(evidence_router, prefix=settings.API_V1_STR)
 app.include_router(orchestration_router, prefix=settings.API_V1_STR)
 app.include_router(reports_router, prefix=settings.API_V1_STR)
+app.include_router(audit_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/health")
