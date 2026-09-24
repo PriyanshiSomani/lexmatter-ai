@@ -16,7 +16,7 @@ from backend.app.models.legal import RequirementApplicability, RequirementVersio
 from backend.app.models.analysis import EvidenceMapping, EvidenceGap
 from backend.app.models.knowledge import Conflict
 from backend.app.models.extraction import SourceAssertion
-from backend.app.models.source import Matter, SourceSpan, Document
+from backend.app.models.source import Matter, SourceSpan, Document, Page, DocumentVersion
 from backend.app.schemas.report import BriefingReportSchema, ReportSection, CitationItem
 
 
@@ -44,10 +44,12 @@ class ReportService:
 
         # 2. Fetch Evidence Mappings & Citations
         map_stmt = (
-            select(EvidenceMapping, SourceAssertion, SourceSpan, Document)
+            select(EvidenceMapping, SourceAssertion, SourceSpan, Page, Document)
             .join(SourceAssertion, EvidenceMapping.source_assertion_id == SourceAssertion.id)
             .outerjoin(SourceSpan, SourceAssertion.source_span_id == SourceSpan.id)
-            .outerjoin(Document, SourceSpan.document_id == Document.id)
+            .outerjoin(Page, SourceSpan.page_id == Page.id)
+            .outerjoin(DocumentVersion, Page.document_version_id == DocumentVersion.id)
+            .outerjoin(Document, DocumentVersion.document_id == Document.id)
             .where(EvidenceMapping.matter_id == matter_id)
         )
         map_res = await db.execute(map_stmt)
@@ -104,7 +106,7 @@ class ReportService:
         matrix_lines.append("| :--- | :--- | :--- |")
 
         for app, req_version, req in req_rows:
-            matrix_lines.append(f"| {req.title} | {req.statutory_reference or 'N/A'} | `{app.status}` |")
+            matrix_lines.append(f"| {req.title} | {req.code or 'N/A'} | `{app.status}` |")
 
         if not req_rows:
             matrix_lines.append("| Standard L-1B Criteria | 8 CFR 214.2(l)(1)(ii)(D) | `EVALUATED` |")
@@ -123,10 +125,10 @@ class ReportService:
         citations_list: List[CitationItem] = []
 
         if mappings:
-            for mapping, assertion, span, doc in mappings:
+            for mapping, assertion, span, page, doc in mappings:
                 doc_name = doc.title if doc else "Document"
-                page_no = span.page_number if span else None
-                snippet = span.text_content if span else assertion.object_value
+                page_no = page.page_number if page else None
+                snippet = span.text_snippet if span else (assertion.object_value or "")
 
                 citation = CitationItem(
                     source_span_id=span.id if span else "N/A",
