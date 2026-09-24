@@ -1,13 +1,13 @@
 # LexMatter AI — Project Progress & Handoff Document
 
-**Last Updated:** Phase 11 Complete  
-**Repository State:** Backend fully operational for core data, document, extraction, search, consistency, evidence, LangGraph multi-agent orchestration, report generation, and audit/provenance lineage engines.
+**Last Updated:** Phase 12 Complete  
+**Repository State:** Backend & Frontend fully operational for core data, document processing, hybrid search, consistency, evidence, LangGraph multi-agent orchestration, PDF reports, provenance lineage, and interactive Next.js web application.
 
 ---
 
 ## 1. Project Overview & Architectural Conventions
 
-* **Framework:** FastAPI + SQLAlchemy 2.0 (AsyncSession) + PostgreSQL (`pgvector`) + LangGraph
+* **Framework:** FastAPI + SQLAlchemy 2.0 (AsyncSession) + PostgreSQL (`pgvector`) + LangGraph + Next.js (React / Tailwind)
 * **ID System:** Typed ULIDs across all entities (`mat_...`, `doc_...`, `span_...`, `fact_...`, etc.) via `app/core/id_generator.py`.
 * **Two-World Architecture:**
   * **World 1 (Immutable Source Data):** Raw document chunks, `SourceSpan` (with character ranges, bounding boxes, 768-dim embeddings), and `SourceAssertion` entities. Never updated once created.
@@ -32,8 +32,8 @@
 | **Phase 9** | LangGraph Multi-Agent Orchestration | ✅ Complete | `app/agents/state.py`, `app/agents/supervisor.py`, `app/agents/workflow.py`, `api/v1/orchestration.py` |
 | **Phase 10** | Briefing & Report Generation | ✅ Complete | `schemas/report.py`, `report_service.py`, `api/v1/reports.py`, `test_report_engine.py` |
 | **Phase 11** | Audit & Provenance Verification | ✅ Complete | `schemas/audit.py`, `audit_service.py`, `api/v1/audit.py`, `test_audit_engine.py` |
-| **Phase 12** | Frontend (Next.js / React) | 🎯 Next | *Interactive document & gap UI* |
-| **Phase 13** | E2E Testing & Portfolio Package | ⏳ Pending | *Docker compose & demo dataset* |
+| **Phase 12** | Frontend (Next.js / React) | ✅ Complete | `src/lib/api.ts`, `src/components/*`, `src/app/matters/[id]/page.tsx` |
+| **Phase 13** | E2E Testing & Portfolio Package | 🎯 Next | *Docker compose & demo dataset* |
 
 ---
 
@@ -48,7 +48,7 @@
 
 ---
 
-## 4. Next Action Item: Phase 12
+## 4. Next Action Item: Phase 13
 
 When starting a new session, instruct the agent:
-> *"Read `docs/PROGRESS.md`. We are ready to begin Phase 12 (Frontend Integration & UI). First share the concepts and step-by-step implementation plan."*
+> *"Read `docs/PROGRESS.md`. We are ready to begin Phase 13 (E2E Testing & Portfolio Packaging). First share the concepts and step-by-step implementation plan."*
