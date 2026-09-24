@@ -125,9 +125,17 @@ export default function MatterWorkspace({ params }: { params: { id: string } }) 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-120px)]">
             {/* Left Column (5 Cols): PDF Document Uploader & Source Viewer */}
             <div className="lg:col-span-5 flex flex-col gap-4 h-full overflow-hidden">
-              <DocumentUploader matterId={matterId} onUploadSuccess={loadMatterData} />
+              <DocumentUploader
+                matterId={matterId}
+                onUploadSuccess={loadMatterData}
+                onClearSuccess={loadMatterData}
+              />
               <div className="flex-1 overflow-hidden">
-                <DocumentViewer documents={documents} />
+                <DocumentViewer
+                  matterId={matterId}
+                  documents={documents}
+                  onDocumentDeleted={loadMatterData}
+                />
               </div>
             </div>
 

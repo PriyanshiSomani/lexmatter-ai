@@ -19,6 +19,16 @@ export interface DocumentItem {
   created_at: string;
 }
 
+export interface SourceSpanItem {
+  id: string;
+  page_id: string;
+  page_number: number;
+  start_char: number;
+  end_char: number;
+  text_snippet: string;
+  text_hash: string;
+}
+
 export interface RequirementItem {
   id: string;
   matter_id: string;
@@ -130,10 +140,8 @@ export interface LineageResponse {
 export async function uploadDocument(matterId: string, file: File, docType: string = "UNKNOWN"): Promise<DocumentItem> {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("matter_id", matterId);
-  formData.append("document_type", docType);
 
-  const res = await fetch(`${API_BASE_URL}/documents/upload`, {
+  const res = await fetch(`${API_BASE_URL}/matters/${matterId}/documents/upload`, {
     method: "POST",
     body: formData,
   });
@@ -147,25 +155,47 @@ export async function uploadDocument(matterId: string, file: File, docType: stri
 }
 
 export async function fetchMatterDocuments(matterId: string): Promise<DocumentItem[]> {
-  const res = await fetch(`${API_BASE_URL}/documents/matter/${matterId}`);
+  const res = await fetch(`${API_BASE_URL}/matters/${matterId}/documents`);
   if (!res.ok) return [];
   return res.json();
 }
 
+export async function fetchDocumentSpans(matterId: string, documentId: string): Promise<SourceSpanItem[]> {
+  const res = await fetch(`${API_BASE_URL}/matters/${matterId}/documents/${documentId}/spans`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function deleteDocument(matterId: string, documentId: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/matters/${matterId}/documents/${documentId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to delete document");
+  return res.json();
+}
+
+export async function clearMatterDocuments(matterId: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/matters/${matterId}/documents`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to clear documents");
+  return res.json();
+}
+
 export async function fetchRequirements(matterId: string): Promise<RequirementItem[]> {
-  const res = await fetch(`${API_BASE_URL}/requirements/matter/${matterId}`);
+  const res = await fetch(`${API_BASE_URL}/matters/${matterId}/requirements`);
   if (!res.ok) return [];
   return res.json();
 }
 
 export async function fetchEvidenceMappings(matterId: string): Promise<EvidenceMappingItem[]> {
-  const res = await fetch(`${API_BASE_URL}/evidence/matters/${matterId}/evidence`);
+  const res = await fetch(`${API_BASE_URL}/matters/${matterId}/evidence`);
   if (!res.ok) return [];
   return res.json();
 }
 
 export async function fetchConflicts(matterId: string): Promise<ConflictItem[]> {
-  const res = await fetch(`${API_BASE_URL}/conflicts/matters/${matterId}`);
+  const res = await fetch(`${API_BASE_URL}/matters/${matterId}/conflicts`);
   if (!res.ok) return [];
   return res.json();
 }
@@ -181,7 +211,7 @@ export async function resolveConflict(conflictId: string, resolutionNotes: strin
 }
 
 export async function fetchEvidenceGaps(matterId: string): Promise<EvidenceGapItem[]> {
-  const res = await fetch(`${API_BASE_URL}/evidence/matters/${matterId}/gaps`);
+  const res = await fetch(`${API_BASE_URL}/matters/${matterId}/gaps`);
   if (!res.ok) return [];
   return res.json();
 }

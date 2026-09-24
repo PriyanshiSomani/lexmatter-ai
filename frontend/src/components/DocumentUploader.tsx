@@ -6,17 +6,23 @@
 "use client";
 
 import React, { useState } from "react";
-import { Upload, FileText, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
-import { uploadDocument, DocumentItem } from "../lib/api";
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Trash2 } from "lucide-react";
+import { uploadDocument, clearMatterDocuments, DocumentItem } from "../lib/api";
 
 interface DocumentUploaderProps {
   matterId: string;
   onUploadSuccess?: (doc: DocumentItem) => void;
+  onClearSuccess?: () => void;
 }
 
-export const DocumentUploader: React.FC<DocumentUploaderProps> = ({ matterId, onUploadSuccess }) => {
+export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
+  matterId,
+  onUploadSuccess,
+  onClearSuccess,
+}) => {
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [docType, setDocType] = useState<string>("SUPPORT_LETTER");
@@ -63,23 +69,51 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({ matterId, on
     }
   };
 
+  const handleClearAll = async () => {
+    if (!confirm("Are you sure you want to delete all uploaded documents for this matter?")) return;
+    setClearing(true);
+    setError(null);
+    try {
+      await clearMatterDocuments(matterId);
+      setSuccessMsg("Cleared all matter documents successfully.");
+      if (onClearSuccess) onClearSuccess();
+    } catch (err: any) {
+      setError(err.message || "Failed to clear matter documents");
+    } finally {
+      setClearing(false);
+    }
+  };
+
   return (
     <div className="w-full p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
       <div className="flex justify-between items-center mb-3">
         <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
           <FileText className="w-4 h-4 text-blue-600" /> Upload Matter Document
         </h3>
-        <select
-          value={docType}
-          onChange={(e) => setDocType(e.target.value)}
-          className="text-xs bg-slate-50 border border-slate-200 rounded px-2 py-1 text-slate-700 font-medium"
-        >
-          <option value="SUPPORT_LETTER">Petition Support Letter</option>
-          <option value="FORM_I129">Form I-129 Petition</option>
-          <option value="PAY_STUB">Pay Stubs / Salary Proof</option>
-          <option value="RESUME">Beneficiary Resume / CV</option>
-          <option value="ORGANIZATIONAL_CHART">Org Chart</option>
-        </select>
+
+        <div className="flex items-center gap-2">
+          <select
+            value={docType}
+            onChange={(e) => setDocType(e.target.value)}
+            className="text-xs bg-slate-50 border border-slate-200 rounded px-2 py-1 text-slate-700 font-medium"
+          >
+            <option value="SUPPORT_LETTER">Petition Support Letter</option>
+            <option value="FORM_I129">Form I-129 Petition</option>
+            <option value="PAY_STUB">Pay Stubs / Salary Proof</option>
+            <option value="RESUME">Beneficiary Resume / CV</option>
+            <option value="ORGANIZATIONAL_CHART">Org Chart</option>
+          </select>
+
+          <button
+            onClick={handleClearAll}
+            disabled={clearing}
+            title="Delete all uploaded documents for this matter"
+            className="px-2.5 py-1 text-xs text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded border border-red-200 font-medium transition-colors flex items-center gap-1"
+          >
+            {clearing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+            Clear All
+          </button>
+        </div>
       </div>
 
       <div

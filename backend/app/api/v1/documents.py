@@ -1,11 +1,11 @@
 """
-LexMatter AI — Document Upload & Ingestion API Endpoints
+LexMatter AI — Document Upload, Ingestion & Deletion API Endpoints
 """
 
 from typing import List
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -135,4 +135,45 @@ async def get_document_source_spans(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch document source spans: {str(e)}",
+        )
+
+
+@router.delete("/{document_id}", status_code=status.HTTP_200_OK)
+async def delete_document(
+    matter_id: str,
+    document_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a specific document and all associated version records from the matter."""
+    try:
+        stmt = select(Document).where(Document.id == document_id, Document.matter_id == matter_id)
+        result = await db.execute(stmt)
+        doc = result.scalar_one_or_none()
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found.")
+
+        await db.delete(doc)
+        await db.commit()
+        return {"status": "DELETED", "document_id": document_id}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete document: {str(e)}",
+        )
+
+
+@router.delete("", status_code=status.HTTP_200_OK)
+async def clear_all_matter_documents(
+    matter_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Clear all documents for a matter."""
+    try:
+        await db.execute(delete(Document).where(Document.matter_id == matter_id))
+        await db.commit()
+        return {"status": "CLEARED", "matter_id": matter_id}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to clear matter documents: {str(e)}",
         )
