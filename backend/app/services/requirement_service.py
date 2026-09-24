@@ -113,9 +113,10 @@ class RequirementService:
         await self.bind_requirements_to_matter(db, matter_id)
 
         stmt = (
-            select(RequirementApplicability, RequirementVersion, Requirement)
+            select(RequirementApplicability, RequirementVersion, Requirement, Authority)
             .join(RequirementVersion, RequirementApplicability.requirement_version_id == RequirementVersion.id)
             .join(Requirement, RequirementVersion.requirement_id == Requirement.id)
+            .outerjoin(Authority, RequirementVersion.authority_id == Authority.id)
             .where(RequirementApplicability.matter_id == matter_id)
             .order_by(Requirement.code)
         )
@@ -123,7 +124,7 @@ class RequirementService:
         rows = result.all()
 
         output = []
-        for app, rv, req in rows:
+        for app, rv, req, auth in rows:
             output.append(RequirementApplicabilitySchema(
                 id=app.id,
                 matter_id=app.matter_id,
@@ -132,6 +133,8 @@ class RequirementService:
                 notes=app.notes,
                 requirement_code=req.code,
                 requirement_title=req.title,
+                statutory_reference=auth.citation_title if auth else "8 CFR § 214.2(l)",
+                evaluation_dimensions=rv.evaluation_dimensions or [],
             ))
         return output
 

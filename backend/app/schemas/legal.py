@@ -48,3 +48,5 @@ class RequirementApplicabilitySchema(BaseModel):
     notes: Optional[str] = None
     requirement_code: Optional[str] = None
     requirement_title: Optional[str] = None
+    statutory_reference: Optional[str] = None
+    evaluation_dimensions: List[str] = Field(default_factory=list)

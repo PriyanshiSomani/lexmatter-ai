@@ -41,6 +41,10 @@ export default function MatterWorkspace({ params }: { params: { id: string } }) 
   const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
   const [evidenceGaps, setEvidenceGaps] = useState<EvidenceGapItem[]>([]);
 
+  // Cross-component interaction state for attorney document citation inspection
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [selectedSpanId, setSelectedSpanId] = useState<string | null>(null);
+
   const loadMatterData = async () => {
     setLoading(true);
     try {
@@ -66,6 +70,11 @@ export default function MatterWorkspace({ params }: { params: { id: string } }) 
   useEffect(() => {
     loadMatterData();
   }, [matterId]);
+
+  const handleSelectCitation = (docId?: string, spanId?: string) => {
+    if (docId) setSelectedDocId(docId);
+    if (spanId) setSelectedSpanId(spanId);
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
@@ -134,6 +143,8 @@ export default function MatterWorkspace({ params }: { params: { id: string } }) 
                 <DocumentViewer
                   matterId={matterId}
                   documents={documents}
+                  selectedDocId={selectedDocId}
+                  selectedSpanId={selectedSpanId}
                   onDocumentDeleted={loadMatterData}
                 />
               </div>
@@ -145,6 +156,7 @@ export default function MatterWorkspace({ params }: { params: { id: string } }) 
                 requirements={requirements}
                 evidenceGaps={evidenceGaps}
                 evidenceMappings={evidenceMappings}
+                onSelectCitation={handleSelectCitation}
               />
               <ConflictResolver conflicts={conflicts} onConflictResolved={loadMatterData} />
               <ReportExporter matterId={matterId} />

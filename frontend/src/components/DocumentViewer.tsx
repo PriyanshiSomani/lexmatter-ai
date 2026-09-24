@@ -6,12 +6,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { FileText, Eye, Bookmark, Trash2, Loader2, RefreshCw } from "lucide-react";
+import { FileText, Eye, Bookmark, Trash2, Loader2, Target } from "lucide-react";
 import { DocumentItem, SourceSpanItem, fetchDocumentSpans, deleteDocument } from "../lib/api";
 
 interface DocumentViewerProps {
   matterId: string;
   documents: DocumentItem[];
+  selectedDocId?: string | null;
   selectedSpanId?: string | null;
   onSelectDocument?: (doc: DocumentItem) => void;
   onDocumentDeleted?: () => void;
@@ -20,6 +21,7 @@ interface DocumentViewerProps {
 export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   matterId,
   documents,
+  selectedDocId,
   selectedSpanId,
   onSelectDocument,
   onDocumentDeleted,
@@ -31,6 +33,13 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
   useEffect(() => {
     if (documents.length > 0) {
+      if (selectedDocId) {
+        const found = documents.find((d) => d.id === selectedDocId);
+        if (found) {
+          setActiveDoc(found);
+          return;
+        }
+      }
       if (!activeDoc || !documents.some((d) => d.id === activeDoc.id)) {
         setActiveDoc(documents[0]);
       }
@@ -38,7 +47,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
       setActiveDoc(null);
       setSpans([]);
     }
-  }, [documents]);
+  }, [documents, selectedDocId]);
 
   useEffect(() => {
     if (!activeDoc) {
@@ -154,25 +163,44 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
               </div>
             ) : spans.length > 0 ? (
               <div className="space-y-3 font-mono text-xs text-slate-700">
-                {spans.map((span, idx) => (
-                  <div
-                    key={span.id}
-                    className="p-3 bg-white rounded border border-slate-200 shadow-2xs space-y-2 hover:border-blue-300 transition-colors"
-                  >
-                    <div className="flex justify-between items-center text-[11px] text-blue-800 bg-blue-50/80 px-2.5 py-1 rounded font-sans">
-                      <span className="font-semibold flex items-center gap-1.5">
-                        <Bookmark className="w-3.5 h-3.5 text-blue-600" /> Span #{idx + 1} • Page {span.page_number}
-                      </span>
-                      <span className="font-mono text-[10px] text-slate-500">
-                        Chars [{span.start_char}..{span.end_char}]
-                      </span>
-                    </div>
+                {spans.map((span, idx) => {
+                  const isHighlighted = selectedSpanId && (span.id === selectedSpanId || selectedSpanId.includes(span.id));
 
-                    <p className="whitespace-pre-wrap leading-relaxed text-slate-800 bg-slate-50/60 p-2.5 rounded border border-slate-100 font-sans">
-                      {span.text_snippet}
-                    </p>
-                  </div>
-                ))}
+                  return (
+                    <div
+                      key={span.id}
+                      id={`span-${span.id}`}
+                      className={`p-3 bg-white rounded border transition-all space-y-2 ${
+                        isHighlighted
+                          ? "border-blue-500 ring-2 ring-blue-400/50 bg-blue-50/40 shadow-sm"
+                          : "border-slate-200 hover:border-blue-300 shadow-2xs"
+                      }`}
+                    >
+                      <div className="flex justify-between items-center text-[11px] text-blue-800 bg-blue-50/80 px-2.5 py-1 rounded font-sans">
+                        <span className="font-semibold flex items-center gap-1.5">
+                          {isHighlighted ? (
+                            <Target className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
+                          ) : (
+                            <Bookmark className="w-3.5 h-3.5 text-blue-600" />
+                          )}
+                          Span #{idx + 1} • Page {span.page_number}
+                          {isHighlighted && (
+                            <span className="ml-2 text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded font-sans">
+                              Active Target Citation
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-mono text-[10px] text-slate-500">
+                          Chars [{span.start_char}..{span.end_char}]
+                        </span>
+                      </div>
+
+                      <p className="whitespace-pre-wrap leading-relaxed text-slate-800 bg-slate-50/60 p-2.5 rounded border border-slate-100 font-sans">
+                        {span.text_snippet}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="p-8 text-center text-xs text-slate-400 bg-white rounded border border-slate-200">
