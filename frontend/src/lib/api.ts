@@ -9,7 +9,7 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost
 // --- TypeScript Domain Interfaces ---
 
 export interface DocumentItem {
-  id: str;
+  id: string;
   matter_id: string;
   title: string;
   file_type: string;

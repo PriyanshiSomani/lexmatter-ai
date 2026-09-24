@@ -7,9 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.db import get_db
-from app.schemas.report import BriefingReportSchema, ReportGenerationRequest, ReportExportFormat
-from app.services.report_service import report_service
+from backend.app.core.db import get_db
+from backend.app.schemas.report import BriefingReportSchema, ReportGenerationRequest, ReportExportFormat
+from backend.app.services.report_service import report_service
 
 router = APIRouter(tags=["Briefing & Reports"])
 

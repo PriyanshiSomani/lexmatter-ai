@@ -6,9 +6,9 @@ Phase 11: Audit & Provenance Verification Engine
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.db import get_db
-from app.schemas.audit import LineageGraphResponse, ConfidenceMetricsSchema, ConfidenceCalculationRequest
-from app.services.audit_service import audit_service
+from backend.app.core.db import get_db
+from backend.app.schemas.audit import LineageGraphResponse, ConfidenceMetricsSchema, ConfidenceCalculationRequest
+from backend.app.services.audit_service import audit_service
 
 router = APIRouter(tags=["Audit & Provenance Verification"])
 
