@@ -167,12 +167,35 @@ async def clear_all_matter_documents(
     matter_id: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """Clear all documents for a matter."""
+    """Clear all documents and perform a clean-slate analysis reset for a matter."""
     try:
+        from backend.app.models.analysis import EvidenceGap, EvidenceMapping, Finding
+        from backend.app.models.knowledge import Conflict
+        from backend.app.models.extraction import SourceAssertion
+        from backend.app.models.legal import RequirementApplicability
+        from sqlalchemy import update
+
+        # 1. Delete all document records
         await db.execute(delete(Document).where(Document.matter_id == matter_id))
+
+        # 2. Delete all analysis & gap records for this matter
+        await db.execute(delete(EvidenceGap).where(EvidenceGap.matter_id == matter_id))
+        await db.execute(delete(EvidenceMapping).where(EvidenceMapping.matter_id == matter_id))
+        await db.execute(delete(Conflict).where(Conflict.matter_id == matter_id))
+        await db.execute(delete(Finding).where(Finding.matter_id == matter_id))
+        await db.execute(delete(SourceAssertion).where(SourceAssertion.matter_id == matter_id))
+
+        # 3. Reset RequirementApplicability status back to NOT_EVALUATED
+        await db.execute(
+            update(RequirementApplicability)
+            .where(RequirementApplicability.matter_id == matter_id)
+            .values(status="NOT_EVALUATED", notes=None)
+        )
+
         await db.commit()
         return {"status": "CLEARED", "matter_id": matter_id}
     except Exception as e:
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to clear matter documents: {str(e)}",
