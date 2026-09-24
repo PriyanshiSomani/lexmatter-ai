@@ -22,6 +22,14 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 }) => {
   const [activeDoc, setActiveDoc] = useState<DocumentItem | null>(documents[0] || null);
 
+  React.useEffect(() => {
+    if (documents.length > 0) {
+      if (!activeDoc || !documents.some(d => d.id === activeDoc.id)) {
+        setActiveDoc(documents[0]);
+      }
+    }
+  }, [documents]);
+
   const handleDocClick = (doc: DocumentItem) => {
     setActiveDoc(doc);
     if (onSelectDocument) onSelectDocument(doc);
