@@ -12,6 +12,8 @@ class EvidenceMappingSchema(BaseModel):
     id: str
     matter_id: str
     source_assertion_id: str
+    source_span_id: Optional[str] = None
+    document_id: Optional[str] = None
     requirement_version_id: str
     relationship: str = Field(description="SUPPORTS, PARTIALLY_SUPPORTS, CONTRADICTS, CONTEXT_ONLY, DUPLICATES, UNCLEAR")
     target_dimension: Optional[str] = None

@@ -68,6 +68,17 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
     loadSpans();
   }, [activeDoc, matterId]);
 
+  useEffect(() => {
+    if (selectedSpanId && spans.length > 0) {
+      setTimeout(() => {
+        const el = document.getElementById(`span-${selectedSpanId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
+    }
+  }, [selectedSpanId, spans]);
+
   const handleDocClick = (doc: DocumentItem) => {
     setActiveDoc(doc);
     if (onSelectDocument) onSelectDocument(doc);

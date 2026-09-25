@@ -68,6 +68,7 @@ async def upload_document(
             "created_at": datetime.utcnow().isoformat(),
         }
     except Exception as e:
+        logger.error(f"Document ingestion failed for '{file.filename}' in Matter '{matter_id}': {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Document ingestion failed: {str(e)}",
@@ -104,6 +105,7 @@ async def list_matter_documents(
             })
         return response
     except Exception as e:
+        logger.error(f"Failed to fetch matter documents for Matter '{matter_id}': {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch matter documents: {str(e)}",
@@ -142,6 +144,7 @@ async def get_document_source_spans(
             })
         return response
     except Exception as e:
+        logger.error(f"Failed to fetch source spans for Document '{document_id}' in Matter '{matter_id}': {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch document source spans: {str(e)}",
@@ -154,18 +157,56 @@ async def delete_document(
     document_id: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete a specific document and all associated version records from the matter."""
+    """Delete a specific document and all associated version/span/assertion records from the matter."""
     try:
+        from backend.app.models.analysis import EvidenceGap, EvidenceMapping, Finding
+        from backend.app.models.extraction import SourceAssertion
+        from backend.app.models.legal import RequirementApplicability
+        from sqlalchemy import func, update
+
         stmt = select(Document).where(Document.id == document_id, Document.matter_id == matter_id)
         result = await db.execute(stmt)
         doc = result.scalar_one_or_none()
         if not doc:
             raise HTTPException(status_code=404, detail="Document not found.")
 
+        # 1. Query all SourceSpan IDs belonging to pages in this document
+        span_ids_stmt = (
+            select(SourceSpan.id)
+            .join(Page, SourceSpan.page_id == Page.id)
+            .join(DocumentVersion, Page.document_version_id == DocumentVersion.id)
+            .where(DocumentVersion.document_id == document_id)
+        )
+        span_ids_res = await db.execute(span_ids_stmt)
+        target_span_ids = span_ids_res.scalars().all()
+
+        # 2. Query all SourceAssertion IDs referencing these spans
+        if target_span_ids:
+            asrt_ids_stmt = select(SourceAssertion.id).where(SourceAssertion.source_span_id.in_(target_span_ids))
+            asrt_ids_res = await db.execute(asrt_ids_stmt)
+            target_asrt_ids = asrt_ids_res.scalars().all()
+
+            if target_asrt_ids:
+                # Delete linked EvidenceMappings
+                await db.execute(delete(EvidenceMapping).where(EvidenceMapping.source_assertion_id.in_(target_asrt_ids)))
+                # Delete linked SourceAssertions
+                await db.execute(delete(SourceAssertion).where(SourceAssertion.id.in_(target_asrt_ids)))
+
+        # 3. Delete Document (cascades to DocumentVersions, Pages, SourceSpans)
         await db.delete(doc)
+        await db.flush()
+
+        # 4. Re-evaluate matter evidence to sync requirement statuses, mappings, and gaps
+        from backend.app.services.evidence_service import evidence_service
+        eval_res = await evidence_service.evaluate_matter_evidence(db, matter_id)
+
         await db.commit()
-        return {"status": "DELETED", "document_id": document_id}
+        return {"status": "DELETED", "document_id": document_id, "remaining_documents": eval_res.get("searched_document_count", 0)}
+    except HTTPException:
+        raise
     except Exception as e:
+        await db.rollback()
+        logger.error(f"Failed to delete document '{document_id}' for Matter '{matter_id}': {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete document: {str(e)}",
@@ -206,6 +247,7 @@ async def clear_all_matter_documents(
         return {"status": "CLEARED", "matter_id": matter_id}
     except Exception as e:
         await db.rollback()
+        logger.error(f"Failed to clear matter documents for Matter '{matter_id}': {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to clear matter documents: {str(e)}",

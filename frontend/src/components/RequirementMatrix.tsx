@@ -213,7 +213,7 @@ export const RequirementMatrix: React.FC<RequirementMatrixProps> = ({
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          onSelectCitation(undefined, map.source_assertion_id);
+                                          onSelectCitation(map.document_id, map.source_span_id || map.source_assertion_id);
                                         }}
                                         className="shrink-0 flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-md transition-colors border border-blue-200"
                                       >

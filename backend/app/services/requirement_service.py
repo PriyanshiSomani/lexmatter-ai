@@ -4,11 +4,14 @@ Handles legal requirement seeding, matter binding, and evaluation status trackin
 """
 
 from typing import Any, Dict, List
-from sqlalchemy import select
+from sqlalchemy import select, func, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.l1b_requirements_seed import AUTHORITIES_SEED, REQUIREMENTS_SEED
 from backend.app.models.legal import Authority, Requirement, RequirementVersion, RequirementApplicability
+from backend.app.models.source import Document
+from backend.app.models.analysis import EvidenceGap, EvidenceMapping, Finding
+from backend.app.models.knowledge import Conflict
 from backend.app.schemas.legal import RequirementApplicabilitySchema
 
 
@@ -112,6 +115,24 @@ class RequirementService:
         # Auto-bind if not bound yet
         await self.bind_requirements_to_matter(db, matter_id)
 
+        # Check total document count for matter
+        doc_count_stmt = select(func.count(Document.id)).where(Document.matter_id == matter_id)
+        doc_count_res = await db.execute(doc_count_stmt)
+        searched_docs = doc_count_res.scalar() or 0
+
+        # If 0 documents exist, ensure all requirement statuses are reset to NOT_EVALUATED
+        if searched_docs == 0:
+            await db.execute(delete(EvidenceGap).where(EvidenceGap.matter_id == matter_id))
+            await db.execute(delete(EvidenceMapping).where(EvidenceMapping.matter_id == matter_id))
+            await db.execute(delete(Conflict).where(Conflict.matter_id == matter_id))
+            await db.execute(delete(Finding).where(Finding.matter_id == matter_id))
+            await db.execute(
+                update(RequirementApplicability)
+                .where(RequirementApplicability.matter_id == matter_id)
+                .values(status="NOT_EVALUATED", notes=None)
+            )
+            await db.flush()
+
         stmt = (
             select(RequirementApplicability, RequirementVersion, Requirement, Authority)
             .join(RequirementVersion, RequirementApplicability.requirement_version_id == RequirementVersion.id)
@@ -129,8 +150,8 @@ class RequirementService:
                 id=app.id,
                 matter_id=app.matter_id,
                 requirement_version_id=app.requirement_version_id,
-                status=app.status,
-                notes=app.notes,
+                status="NOT_EVALUATED" if searched_docs == 0 else app.status,
+                notes=app.notes if searched_docs > 0 else None,
                 requirement_code=req.code,
                 requirement_title=req.title,
                 statutory_reference=auth.citation_title if auth else "8 CFR § 214.2(l)",

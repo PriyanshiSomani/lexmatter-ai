@@ -80,11 +80,14 @@ async def log_requests(request: Request, call_next):
     try:
         response = await call_next(request)
         process_time_ms = (time.time() - start_time) * 1000
-        logger.info(f"<-- {request.method} {full_path} | Status: {response.status_code} | Duration: {process_time_ms:.2f}ms")
+        if response.status_code >= 500:
+            logger.error(f"<-- {request.method} {full_path} | HTTP {response.status_code} SERVER ERROR | Duration: {process_time_ms:.2f}ms")
+        else:
+            logger.info(f"<-- {request.method} {full_path} | Status: {response.status_code} | Duration: {process_time_ms:.2f}ms")
         return response
     except Exception as exc:
         process_time_ms = (time.time() - start_time) * 1000
-        logger.error(f"<-- {request.method} {full_path} | FAILED | Exception: {str(exc)} | Duration: {process_time_ms:.2f}ms", exc_info=True)
+        logger.error(f"<-- {request.method} {full_path} | UNHANDLED EXCEPTION: {str(exc)} | Duration: {process_time_ms:.2f}ms", exc_info=True)
         raise
 
 # Register API Routers

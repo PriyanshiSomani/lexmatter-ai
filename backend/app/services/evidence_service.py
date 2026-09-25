@@ -5,13 +5,14 @@ Maps SourceAssertions to RequirementVersion dimensions and detects evidentiary g
 
 from typing import Any, Dict, List
 import re
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.models.source import Document, DocumentVersion, Page, SourceSpan
 from backend.app.models.extraction import SourceAssertion
 from backend.app.models.legal import RequirementVersion, RequirementApplicability, Requirement
-from backend.app.models.analysis import EvidenceMapping, EvidenceGap
+from backend.app.models.analysis import EvidenceMapping, EvidenceGap, Finding
+from backend.app.models.knowledge import Conflict
 from backend.app.services.requirement_service import requirement_service
 
 
@@ -62,6 +63,40 @@ class EvidenceService:
         doc_count_res = await db.execute(doc_count_stmt)
         searched_docs = doc_count_res.scalar() or 0
 
+        # Fetch bound requirement applicabilities
+        reqapp_stmt = (
+            select(RequirementApplicability, RequirementVersion, Requirement)
+            .join(RequirementVersion, RequirementApplicability.requirement_version_id == RequirementVersion.id)
+            .join(Requirement, RequirementVersion.requirement_id == Requirement.id)
+            .where(RequirementApplicability.matter_id == matter_id)
+        )
+        reqapp_res = await db.execute(reqapp_stmt)
+        rows = reqapp_res.all()
+
+        # Handle 0 documents: Clean slate reset
+        if searched_docs == 0:
+            await db.execute(delete(EvidenceGap).where(EvidenceGap.matter_id == matter_id))
+            await db.execute(delete(EvidenceMapping).where(EvidenceMapping.matter_id == matter_id))
+            await db.execute(delete(Conflict).where(Conflict.matter_id == matter_id))
+            await db.execute(delete(Finding).where(Finding.matter_id == matter_id))
+            await db.execute(
+                update(RequirementApplicability)
+                .where(RequirementApplicability.matter_id == matter_id)
+                .values(status="NOT_EVALUATED", notes=None)
+            )
+            await db.flush()
+            return {
+                "requirements_evaluated": len(rows),
+                "mappings_created": 0,
+                "gaps_created": 0,
+                "searched_document_count": 0,
+            }
+
+        # Clear stale gaps and mappings prior to re-evaluating remaining documents
+        await db.execute(delete(EvidenceGap).where(EvidenceGap.matter_id == matter_id))
+        await db.execute(delete(EvidenceMapping).where(EvidenceMapping.matter_id == matter_id))
+        await db.flush()
+
         # 2. Fetch all matter assertions
         asrt_stmt = select(SourceAssertion).where(SourceAssertion.matter_id == matter_id)
         asrt_res = await db.execute(asrt_stmt)
@@ -80,16 +115,6 @@ class EvidenceService:
 
         # Index existing assertions by source_span_id
         span_to_asrt: Dict[str, SourceAssertion] = {a.source_span_id: a for a in assertions if a.source_span_id}
-
-        # 3. Fetch bound requirement applicabilities
-        reqapp_stmt = (
-            select(RequirementApplicability, RequirementVersion, Requirement)
-            .join(RequirementVersion, RequirementApplicability.requirement_version_id == RequirementVersion.id)
-            .join(Requirement, RequirementVersion.requirement_id == Requirement.id)
-            .where(RequirementApplicability.matter_id == matter_id)
-        )
-        reqapp_res = await db.execute(reqapp_stmt)
-        rows = reqapp_res.all()
 
         mappings_created = 0
         gaps_created = 0

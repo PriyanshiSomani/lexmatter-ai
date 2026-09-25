@@ -42,6 +42,8 @@ export interface EvidenceMappingItem {
   id: string;
   matter_id: string;
   source_assertion_id: string;
+  source_span_id?: string;
+  document_id?: string;
   requirement_version_id: string;
   relationship: string;
   target_dimension: string;
