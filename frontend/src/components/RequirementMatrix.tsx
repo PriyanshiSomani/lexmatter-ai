@@ -62,7 +62,7 @@ const renderStatusBadge = (status: string) => {
     default:
       return (
         <span className="whitespace-nowrap inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
-          <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" /> Pending Evaluation
+          <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" /> Not Evaluated
         </span>
       );
   }

@@ -1,5 +1,5 @@
 /**
- * LexMatter AI — Drag-and-Drop Document Uploader Component
+ * LexMatter AI — Multi-File Drag-and-Drop Document Uploader Component
  * Phase 12: Frontend Integration & UI
  */
 
@@ -22,6 +22,7 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [progressMsg, setProgressMsg] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -36,21 +37,42 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     setIsDragging(false);
   };
 
-  const processFile = async (file: File) => {
-    if (!file) return;
+  const processFiles = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+
     setUploading(true);
     setError(null);
     setSuccessMsg(null);
 
-    try {
-      const doc = await uploadDocument(matterId, file, docType);
-      setSuccessMsg(`Successfully uploaded & ingested "${doc.title}"`);
-      if (onUploadSuccess) onUploadSuccess(doc);
-    } catch (err: any) {
-      setError(err.message || "Failed to upload document");
-    } finally {
-      setUploading(false);
-      setIsDragging(false);
+    let uploadedCount = 0;
+    let lastDoc: DocumentItem | null = null;
+    const errors: string[] = [];
+
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      setProgressMsg(`Uploading & ingesting file ${i + 1} of ${fileArray.length}: "${file.name}"...`);
+
+      try {
+        const doc = await uploadDocument(matterId, file, docType);
+        uploadedCount++;
+        lastDoc = doc;
+        if (onUploadSuccess) onUploadSuccess(doc);
+      } catch (err: any) {
+        errors.push(`${file.name}: ${err.message || "Upload failed"}`);
+      }
+    }
+
+    setUploading(false);
+    setIsDragging(false);
+    setProgressMsg(null);
+
+    if (uploadedCount > 0) {
+      setSuccessMsg(`Successfully uploaded & ingested ${uploadedCount} document(s).`);
+    }
+
+    if (errors.length > 0) {
+      setError(`Errors encountered: ${errors.join("; ")}`);
     }
   };
 
@@ -58,14 +80,14 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
     e.preventDefault();
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      processFile(files[0]);
+      processFiles(files);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      processFile(files[0]);
+      processFiles(files);
     }
   };
 
@@ -127,15 +149,16 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
         <input
           type="file"
           accept=".pdf,.txt,.docx"
+          multiple
           onChange={handleFileChange}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           disabled={uploading}
         />
 
         {uploading ? (
-          <div className="flex flex-col items-center gap-2 text-blue-600">
+          <div className="flex flex-col items-center gap-2 text-blue-600 text-center p-2">
             <Loader2 className="w-8 h-8 animate-spin" />
-            <p className="text-xs font-medium">Extracting text & computing vector spans...</p>
+            <p className="text-xs font-medium">{progressMsg || "Extracting text & computing vector spans..."}</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 text-center">
@@ -144,9 +167,9 @@ export const DocumentUploader: React.FC<DocumentUploaderProps> = ({
             </div>
             <div>
               <p className="text-xs font-medium text-slate-700">
-                <span className="font-semibold text-blue-600">Click to upload</span> or drag and drop
+                <span className="font-semibold text-blue-600">Click to upload multiple files</span> or drag and drop
               </p>
-              <p className="text-[11px] text-slate-400 mt-1">PDF, TXT, or DOCX (Max 25MB)</p>
+              <p className="text-[11px] text-slate-400 mt-1">Select one or multiple PDF, TXT files (Max 25MB each)</p>
             </div>
           </div>
         )}

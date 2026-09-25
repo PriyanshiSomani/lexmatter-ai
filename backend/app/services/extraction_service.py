@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.models.source import Page, SourceSpan
+from backend.app.models.source import Page, SourceSpan, DocumentVersion, Document
 from backend.app.models.extraction import SourceAssertion, Event
 from backend.app.schemas.extraction import ExtractedAssertion, ExtractedEntity, ExtractedEvent
 from backend.app.services.entity_resolver_service import entity_resolver_service
@@ -90,9 +90,9 @@ class ExtractionService:
         stmt = (
             select(SourceSpan)
             .join(Page, SourceSpan.page_id == Page.id)
-            .join(Page.document_version)
-            .join(DocumentVersion.document)
-            .where(DocumentVersion.document.has(matter_id=matter_id))
+            .join(DocumentVersion, Page.document_version_id == DocumentVersion.id)
+            .join(Document, DocumentVersion.document_id == Document.id)
+            .where(Document.matter_id == matter_id)
         )
         result = await db.execute(stmt)
         spans = result.scalars().all()
