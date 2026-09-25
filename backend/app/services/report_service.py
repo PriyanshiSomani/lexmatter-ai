@@ -144,7 +144,7 @@ class ReportService:
 
                 evidence_lines.append(
                     f"- **Dimension:** `{mapping.target_dimension}`\n"
-                    f"  - **Assertion:** Subject `{assertion.subject_name or assertion.predicate}` -> `{assertion.object_value}`\n"
+                    f"  - **Assertion:** Predicate `{assertion.predicate}` -> `{assertion.object_value}`\n"
                     f"  - **Relevance Score:** `{mapping.relevance_score:.2f}`\n"
                     f"  - **Source Citation:** *{doc_name}* (Page {page_no or 1}) — `Span: {citation.source_span_id}`\n"
                 )

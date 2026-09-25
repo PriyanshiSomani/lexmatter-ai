@@ -11,6 +11,9 @@ from backend.app.core.db import get_db
 from backend.app.schemas.report import BriefingReportSchema, ReportGenerationRequest, ReportExportFormat
 from backend.app.services.report_service import report_service
 
+from backend.app.core.logger import get_logger
+
+logger = get_logger("api.reports")
 router = APIRouter(tags=["Briefing & Reports"])
 
 
@@ -32,6 +35,7 @@ async def generate_matter_report(
         )
         return report
     except Exception as e:
+        logger.error(f"Report generation failed for Matter '{matter_id}': {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Report generation failed: {str(e)}",
@@ -76,6 +80,7 @@ async def export_matter_report(
                 },
             )
     except Exception as e:
+        logger.error(f"Report export failed for Matter '{matter_id}' (Format: {export_format}): {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Report export failed: {str(e)}",
