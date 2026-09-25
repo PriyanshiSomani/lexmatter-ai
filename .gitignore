@@ -30,10 +30,13 @@ yarn-error.log*
 dist/
 build/
 
-# Database / Storage / Docker
+# Database / Storage / Docker / Logs
 postgres_data/
+storage/
+logs/
 *.sqlite3
 *.db
+*.db-*
 
 # OS generated files
 .DS_Store

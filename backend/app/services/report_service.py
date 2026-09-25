@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import fitz  # PyMuPDF for PDF export
 
+from backend.app.core.logger import get_logger
 from backend.app.core.id_generator import generate_id
 from backend.app.models.legal import RequirementApplicability, RequirementVersion, Requirement
 from backend.app.models.analysis import EvidenceMapping, EvidenceGap
@@ -18,6 +19,8 @@ from backend.app.models.knowledge import Conflict
 from backend.app.models.extraction import SourceAssertion
 from backend.app.models.source import Matter, SourceSpan, Document, Page, DocumentVersion
 from backend.app.schemas.report import BriefingReportSchema, ReportSection, CitationItem
+
+logger = get_logger("services.report")
 
 
 class ReportService:
@@ -33,6 +36,7 @@ class ReportService:
         Aggregates matter requirements, evidence mappings, cross-document conflicts,
         and evidence gaps to build a fully cited, non-adjudicative briefing report.
         """
+        logger.info(f"Generating legal briefing report for Matter '{matter_id}' (Case Type: {case_type_code})...")
         report_id = generate_id("rep")
         now = datetime.utcnow()
 
@@ -217,6 +221,8 @@ class ReportService:
 
         full_markdown = "\n".join(full_md_parts)
 
+        logger.info(f"Briefing report '{report_id}' successfully synthesized for Matter '{matter_id}' (Mapped Evidence: {len(mappings)}, Conflicts: {len(conflicts)}, Gaps: {len(gaps)}).")
+
         return BriefingReportSchema(
             report_id=report_id,
             matter_id=matter_id,
@@ -235,6 +241,7 @@ class ReportService:
         """
         Generates a PDF document binary from a BriefingReportSchema using PyMuPDF (fitz).
         """
+        logger.info(f"Exporting PDF binary for report '{report.report_id}' (Matter: '{report.matter_id}')...")
         doc = fitz.open()  # Create empty PDF in memory
         page = doc.new_page(width=595, height=842)  # A4 size in points
         
@@ -283,6 +290,7 @@ class ReportService:
 
         pdf_bytes = doc.tobytes()
         doc.close()
+        logger.info(f"PDF binary generated successfully for report '{report.report_id}' (Binary size: {len(pdf_bytes)} bytes).")
         return pdf_bytes
 
 

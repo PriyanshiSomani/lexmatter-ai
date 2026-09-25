@@ -102,6 +102,11 @@ def build_matter_analysis_graph():
     return builder.compile(checkpointer=checkpointer)
 
 
+from backend.app.core.logger import get_logger
+
+logger = get_logger("agents.workflow")
+
+
 # Singleton compiled graph instance
 matter_analysis_graph = build_matter_analysis_graph()
 
@@ -115,6 +120,8 @@ async def run_matter_analysis_workflow(
     """
     High-level entry point to execute the multi-agent analysis workflow for a legal matter.
     """
+    logger.info(f"Initiating multi-agent analysis workflow for Matter '{matter_id}' (Case Type: {case_type_code}, Max Iterations: {max_iterations})...")
+
     # 1. Fetch requirement dimensions for the case type
     req_stmt = (
         select(RequirementVersion.evaluation_dimensions)
@@ -139,6 +146,9 @@ async def run_matter_analysis_workflow(
             "qualifying_capacity_executive_managerial_or_specialized",
             "proprietary_product_process_or_system",
         ]
+        logger.info(f"No bound applicability dimensions found yet for Matter '{matter_id}'. Using default L1B fallback dimensions ({len(unprocessed_dims)} dimensions).")
+    else:
+        logger.info(f"Fetched {len(unprocessed_dims)} target evaluation dimensions for Matter '{matter_id}': {unprocessed_dims}")
 
     # 2. Build initial state
     initial_state = create_initial_matter_state(
@@ -157,5 +167,15 @@ async def run_matter_analysis_workflow(
     }
 
     # 4. Invoke LangGraph workflow
+    logger.info(f"Executing LangGraph state graph for Matter '{matter_id}'...")
     final_state = await matter_analysis_graph.ainvoke(initial_state, config=config)
+
+    logger.info(
+        f"Multi-agent workflow execution completed for Matter '{matter_id}' "
+        f"[Total Iterations: {final_state.get('iteration_count')}, "
+        f"Mapped Evidence: {len(final_state.get('mapped_evidence_ids', []))}, "
+        f"Conflicts: {len(final_state.get('identified_conflict_ids', []))}, "
+        f"Gaps: {len(final_state.get('identified_gap_ids', []))}, "
+        f"Human Review Required: {final_state.get('requires_human_review')}]"
+    )
     return final_state

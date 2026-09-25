@@ -14,6 +14,9 @@ from backend.app.services.evidence_service import evidence_service
 from backend.app.models.analysis import EvidenceMapping, EvidenceGap
 from backend.app.models.audit import AgentRun
 from backend.app.core.id_generator import generate_id
+from backend.app.core.logger import get_logger
+
+logger = get_logger("agents.evidence_node")
 
 
 async def evidence_analyst_node(state: MatterAnalysisState, db: AsyncSession) -> Dict[str, Any]:
@@ -27,8 +30,10 @@ async def evidence_analyst_node(state: MatterAnalysisState, db: AsyncSession) ->
     mapped_ids = list(state.get("mapped_evidence_ids", []))
     gap_ids = list(state.get("identified_gap_ids", []))
     iteration = state.get("iteration_count", 0)
+    matter_id = state.get("matter_id", "unknown")
 
     if not unprocessed:
+        logger.info(f"[EVIDENCE_ANALYST] No unprocessed dimensions remaining for Matter '{matter_id}'. Node step skipped.")
         return {
             "current_step": "evidence_analyst",
             "current_dimension": None,
@@ -38,24 +43,27 @@ async def evidence_analyst_node(state: MatterAnalysisState, db: AsyncSession) ->
     # Pop one dimension to process
     current_dim = unprocessed.pop(0)
     processed.append(current_dim)
+    logger.info(f"[EVIDENCE_ANALYST] Evaluating dimension '{current_dim}' for Matter '{matter_id}'...")
 
     # Run evidence service evaluation
-    eval_res = await evidence_service.evaluate_matter_evidence(db, state["matter_id"])
+    eval_res = await evidence_service.evaluate_matter_evidence(db, matter_id)
 
     # Query latest generated mappings and gaps for this matter
-    map_stmt = select(EvidenceMapping.id).where(EvidenceMapping.matter_id == state["matter_id"])
+    map_stmt = select(EvidenceMapping.id).where(EvidenceMapping.matter_id == matter_id)
     map_res = await db.execute(map_stmt)
     new_mapped_ids = list(set(mapped_ids + [r for r in map_res.scalars().all()]))
 
-    gap_stmt = select(EvidenceGap.id).where(EvidenceGap.matter_id == state["matter_id"])
+    gap_stmt = select(EvidenceGap.id).where(EvidenceGap.matter_id == matter_id)
     gap_res = await db.execute(gap_stmt)
     new_gap_ids = list(set(gap_ids + [r for r in gap_res.scalars().all()]))
+
+    logger.info(f"[EVIDENCE_ANALYST] Evaluation of dimension '{current_dim}' complete -> Total Mappings: {len(new_mapped_ids)}, Total Gaps: {len(new_gap_ids)}")
 
     # Audit logging
     log_id = generate_id("log")
     audit_log = AgentRun(
         id=log_id,
-        matter_id=state["matter_id"],
+        matter_id=matter_id,
         agent_name="EvidenceAnalyst",
         status="COMPLETED",
         input_payload={"current_dimension": current_dim, "iteration": iteration},
