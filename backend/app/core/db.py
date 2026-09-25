@@ -43,10 +43,11 @@ engine_kwargs = {"connect_args": connect_args} if "sqlite" in db_url else {
     "max_overflow": settings.DB_MAX_OVERFLOW,
 }
 
-# Async database engine
+# Async database engine (silence raw SQL engine output by default for clean application logs)
+sql_echo = os.getenv("SQL_ECHO", "false").lower() == "true"
 engine: AsyncEngine = create_async_engine(
     db_url,
-    echo=settings.DEBUG,
+    echo=sql_echo,
     future=True,
     **engine_kwargs,
 )

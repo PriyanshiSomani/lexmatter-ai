@@ -15,6 +15,9 @@ from backend.app.services.hybrid_search_service import hybrid_search_service
 from backend.app.models.analysis import EvidenceGap
 from backend.app.models.audit import AgentRun
 from backend.app.core.id_generator import generate_id
+from backend.app.core.logger import get_logger
+
+logger = get_logger("agents.research_node")
 
 
 async def research_agent_node(state: MatterAnalysisState, db: AsyncSession) -> Dict[str, Any]:
@@ -24,7 +27,9 @@ async def research_agent_node(state: MatterAnalysisState, db: AsyncSession) -> D
     updates gap records if findings emerge, and sets research_completed = True.
     """
     iteration = state.get("iteration_count", 0)
+    matter_id = state.get("matter_id", "unknown")
     gap_ids = state.get("identified_gap_ids", [])
+    logger.info(f"[AGENT REQUEST] [RESEARCH_AGENT] Matter '{matter_id}' - Request payload: Investigating {len(gap_ids)} potential evidence gaps via hybrid search")
 
     gaps_researched = 0
     spans_discovered = 0
@@ -43,7 +48,7 @@ async def research_agent_node(state: MatterAnalysisState, db: AsyncSession) -> D
             # Execute hybrid search across matter corpus
             search_results = await hybrid_search_service.search_matter_spans(
                 db,
-                matter_id=state["matter_id"],
+                matter_id=matter_id,
                 query_text=search_query,
                 top_k=3,
             )
@@ -57,6 +62,8 @@ async def research_agent_node(state: MatterAnalysisState, db: AsyncSession) -> D
                 )
 
         await db.flush()
+
+    logger.info(f"[AGENT RESPONSE] [RESEARCH_AGENT] Matter '{matter_id}' - Response output: Researched {gaps_researched} gaps | Discovered {spans_discovered} candidate spans")
 
     # Audit logging
     log_id = generate_id("log")

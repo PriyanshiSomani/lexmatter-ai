@@ -14,6 +14,9 @@ from backend.app.services.consistency_service import consistency_service
 from backend.app.models.knowledge import Conflict
 from backend.app.models.audit import AgentRun
 from backend.app.core.id_generator import generate_id
+from backend.app.core.logger import get_logger
+
+logger = get_logger("agents.consistency_node")
 
 
 async def consistency_analyst_node(state: MatterAnalysisState, db: AsyncSession) -> Dict[str, Any]:
@@ -23,12 +26,14 @@ async def consistency_analyst_node(state: MatterAnalysisState, db: AsyncSession)
     and updates state flags.
     """
     iteration = state.get("iteration_count", 0)
+    matter_id = state.get("matter_id", "unknown")
+    logger.info(f"[AGENT REQUEST] [CONSISTENCY_ANALYST] Matter '{matter_id}' - Request payload: Running cross-document assertion reconciliation (Iteration {iteration})")
 
     # Execute consistency engine analysis
-    result_metrics = await consistency_service.analyze_matter_consistency(db, state["matter_id"])
+    result_metrics = await consistency_service.analyze_matter_consistency(db, matter_id)
 
     # Query all conflict IDs for this matter
-    conflict_stmt = select(Conflict).where(Conflict.matter_id == state["matter_id"])
+    conflict_stmt = select(Conflict).where(Conflict.matter_id == matter_id)
     conflict_res = await db.execute(conflict_stmt)
     conflicts = conflict_res.scalars().all()
     conflict_ids = [c.id for c in conflicts]
@@ -43,6 +48,8 @@ async def consistency_analyst_node(state: MatterAnalysisState, db: AsyncSession)
         review_reasons.append(
             f"Detected {len(high_severity_conflicts)} high-severity cross-document conflicts (e.g. date/employment mismatches)."
         )
+
+    logger.info(f"[AGENT RESPONSE] [CONSISTENCY_ANALYST] Matter '{matter_id}' - Response output: Reconciled assertion pairs | Total Conflicts: {len(conflict_ids)}, High Severity: {len(high_severity_conflicts)}")
 
     # Audit logging
     log_id = generate_id("log")

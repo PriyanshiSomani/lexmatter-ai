@@ -43,7 +43,7 @@ async def evidence_analyst_node(state: MatterAnalysisState, db: AsyncSession) ->
     # Pop one dimension to process
     current_dim = unprocessed.pop(0)
     processed.append(current_dim)
-    logger.info(f"[EVIDENCE_ANALYST] Evaluating dimension '{current_dim}' for Matter '{matter_id}'...")
+    logger.info(f"[AGENT REQUEST] [EVIDENCE_ANALYST] Matter '{matter_id}' - Evaluating dimension '{current_dim}' (Remaining unprocessed: {len(unprocessed)})")
 
     # Run evidence service evaluation
     eval_res = await evidence_service.evaluate_matter_evidence(db, matter_id)
@@ -57,7 +57,7 @@ async def evidence_analyst_node(state: MatterAnalysisState, db: AsyncSession) ->
     gap_res = await db.execute(gap_stmt)
     new_gap_ids = list(set(gap_ids + [r for r in gap_res.scalars().all()]))
 
-    logger.info(f"[EVIDENCE_ANALYST] Evaluation of dimension '{current_dim}' complete -> Total Mappings: {len(new_mapped_ids)}, Total Gaps: {len(new_gap_ids)}")
+    logger.info(f"[AGENT RESPONSE] [EVIDENCE_ANALYST] Matter '{matter_id}' - Completed evaluation for '{current_dim}' | Total Mappings: {len(new_mapped_ids)}, Total Gaps: {len(new_gap_ids)}")
 
     # Audit logging
     log_id = generate_id("log")

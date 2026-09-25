@@ -12,8 +12,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.core.db import get_db
 from backend.app.models.source import Document, DocumentVersion, Page, SourceSpan
 from backend.app.services.ingestion_service import ingestion_service
+from backend.app.services.extraction_service import extraction_service
+from backend.app.core.logger import get_logger
 
-router = APIRouter(prefix="/matters/{matter_id}/documents", tags=["Documents"])
+logger = get_logger("api.documents")
+
+router = APIRouter(prefix="/matters/{matter_id}/documents", tags=["documents"])
 
 
 @router.post("/upload", status_code=status.HTTP_201_CREATED)
@@ -41,12 +45,18 @@ async def upload_document(
         )
 
     try:
+        logger.info(f"Ingesting uploaded document '{file.filename}' for Matter '{matter_id}'...")
         result = await ingestion_service.ingest_document(
             db=db,
             matter_id=matter_id,
             file_name=file.filename,
             file_bytes=file_bytes,
         )
+
+        # Auto-trigger assertion & entity extraction for matter spans
+        logger.info(f"Auto-extracting SourceAssertions and entities for Matter '{matter_id}'...")
+        ext_result = await extraction_service.process_matter_extractions(db, matter_id)
+        logger.info(f"Assertion extraction complete for '{file.filename}' (Assertions created: {ext_result.get('assertions_created')}).")
         return {
             "id": result["document_id"],
             "matter_id": matter_id,

@@ -14,6 +14,9 @@ from backend.app.models.analysis import EvidenceMapping
 from backend.app.models.extraction import SourceAssertion
 from backend.app.models.audit import AgentRun
 from backend.app.core.id_generator import generate_id
+from backend.app.core.logger import get_logger
+
+logger = get_logger("agents.verification_node")
 
 
 async def verification_agent_node(state: MatterAnalysisState, db: AsyncSession) -> Dict[str, Any]:
@@ -23,7 +26,9 @@ async def verification_agent_node(state: MatterAnalysisState, db: AsyncSession) 
     Sets verification_completed = True.
     """
     iteration = state.get("iteration_count", 0)
+    matter_id = state.get("matter_id", "unknown")
     mapping_ids = state.get("mapped_evidence_ids", [])
+    logger.info(f"[AGENT REQUEST] [VERIFICATION_AGENT] Matter '{matter_id}' - Request payload: Auditing provenance verification for {len(mapping_ids)} mapped evidence spans")
     
     verified_count = 0
     unverified_count = 0
@@ -51,6 +56,9 @@ async def verification_agent_node(state: MatterAnalysisState, db: AsyncSession) 
             review_reasons.append(
                 f"Verification Audit Warning: {unverified_count} evidence mappings lack explicit SourceSpan character offsets."
             )
+
+    pass_rate = (verified_count / len(mapping_ids)) * 100 if mapping_ids else 100.0
+    logger.info(f"[AGENT RESPONSE] [VERIFICATION_AGENT] Matter '{matter_id}' - Response output: Provenance Pass Rate: {pass_rate:.1f}% | Verified: {verified_count}, Unverified: {unverified_count}")
 
     # Audit logging
     log_id = generate_id("log")

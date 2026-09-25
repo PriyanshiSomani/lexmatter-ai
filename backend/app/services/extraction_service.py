@@ -22,7 +22,9 @@ class ExtractionService:
         "employment_start_date": r"\b(employed|started|joined|commenced)\s+(?:from|on|in)?\s*([A-Z][a-z]+\s+\d{1,2},\s+\d{4}|\d{4}-\d{2}-\d{2}|[A-Z][a-z]+\s+\d{4})\b",
         "job_title": r"\b(employed\s+as|title\s+of|position\s+of|role\s+as)\s+([A-Z][A-Za-z0-9\s]{3,40})\b",
         "annual_salary": r"\b(salary|compensation|remuneration)\s+(?:of)?\s*(\$\d{2,3},\d{3}|\$\d{5,6})\b",
-        "degree_conferred": r"\b(bachelor|master|doctorate|phd|b\.s\.|m\.s\.)\s+(?:of|in)?\s*([A-Za-z\s]{3,30})\b",
+        "degree_conferred": r"\b(bachelor|master|doctorate|phd|ph\.d\.|b\.s\.|m\.s\.)\s+(?:of|in)?\s*([A-Za-z\s]{3,30})\b",
+        "corporate_relationship": r"\b(parent|subsidiary|wholly owned|ownership|branch|affiliate)\b",
+        "specialized_tool": r"\b(titan risk engine|proprietary|patent|framework|architecture|trade secret)\b",
     }
 
     def extract_from_snippet(self, text_snippet: str) -> Dict[str, List[Any]]:
@@ -72,6 +74,38 @@ class ExtractionService:
                 normalized_value=sal_str,
                 raw_text=salary_match.group(0),
                 confidence=0.90,
+            ))
+
+        # 4. Academic Degree Extraction
+        degree_match = re.search(self.PATTERNS["degree_conferred"], text_snippet, re.IGNORECASE)
+        if degree_match:
+            degree_str = degree_match.group(0).strip()
+            entities.append(ExtractedEntity(name=degree_str, entity_type="ACADEMIC_DEGREE"))
+            assertions.append(ExtractedAssertion(
+                predicate="academic_degree",
+                normalized_value=degree_str,
+                raw_text=degree_match.group(0),
+                confidence=0.95,
+            ))
+
+        # 5. Corporate Relationship Extraction
+        corp_match = re.search(self.PATTERNS["corporate_relationship"], text_snippet, re.IGNORECASE)
+        if corp_match:
+            assertions.append(ExtractedAssertion(
+                predicate="corporate_relationship",
+                normalized_value=corp_match.group(0),
+                raw_text=corp_match.group(0),
+                confidence=0.95,
+            ))
+
+        # 6. Specialized Knowledge Extraction
+        spec_match = re.search(self.PATTERNS["specialized_tool"], text_snippet, re.IGNORECASE)
+        if spec_match:
+            assertions.append(ExtractedAssertion(
+                predicate="specialized_tool_used",
+                normalized_value=spec_match.group(0),
+                raw_text=spec_match.group(0),
+                confidence=0.95,
             ))
 
         return {
