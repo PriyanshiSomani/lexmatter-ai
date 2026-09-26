@@ -16,3 +16,7 @@ This directory documents the foundational design and architectural decisions mad
 | **ADR-010** | [Agents Operate Over Structured Matter State](ADR-010-agents-over-structured-state.md) | Accepted | 2026-09-20 |
 | **ADR-011** | [Strict Separation of Deterministic Services from Agents](ADR-011-deterministic-vs-agentic.md) | Accepted | 2026-09-20 |
 | **ADR-012** | [Character-Offset Source Provenance (SourceSpan)](ADR-012-source-provenance-sourcespan.md) | Accepted | 2026-09-20 |
+| **ADR-013** | [Granular Per-Dimension Evidence Evaluation & State Synchronization](ADR-013-per-dimension-evidence-evaluation.md) | Accepted | 2026-09-26 |
+| **ADR-014** | [4-Tier Verification Hierarchy & Provenance Integrity](ADR-014-four-tier-verification-hierarchy.md) | Accepted | 2026-09-26 |
+| **ADR-015** | [Persistent Checkpointing & Interrupt/Resume Human-Review Gate](ADR-015-persistent-checkpointing-human-review-gate.md) | Accepted | 2026-09-26 |
+| **ADR-016** | [Dual-Engine Database Fallback & Vector Search Degradation Strategy](ADR-016-dual-engine-database-fallback-strategy.md) | Accepted | 2026-09-26 |
