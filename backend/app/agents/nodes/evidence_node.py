@@ -45,17 +45,17 @@ async def evidence_analyst_node(state: MatterAnalysisState, db: AsyncSession) ->
     processed.append(current_dim)
     logger.info(f"[AGENT REQUEST] [EVIDENCE_ANALYST] Matter '{matter_id}' - Evaluating dimension '{current_dim}' (Remaining unprocessed: {len(unprocessed)})")
 
-    # Run evidence service evaluation
-    eval_res = await evidence_service.evaluate_matter_evidence(db, matter_id)
+    # Run evidence service evaluation for the specific dimension
+    eval_res = await evidence_service.evaluate_dimension_evidence(db, matter_id, current_dim)
 
-    # Query latest generated mappings and gaps for this matter
+    # Query active generated mappings and gaps for this matter
     map_stmt = select(EvidenceMapping.id).where(EvidenceMapping.matter_id == matter_id)
     map_res = await db.execute(map_stmt)
-    new_mapped_ids = list(set(mapped_ids + [r for r in map_res.scalars().all()]))
+    new_mapped_ids = list(map_res.scalars().all())
 
     gap_stmt = select(EvidenceGap.id).where(EvidenceGap.matter_id == matter_id)
     gap_res = await db.execute(gap_stmt)
-    new_gap_ids = list(set(gap_ids + [r for r in gap_res.scalars().all()]))
+    new_gap_ids = list(gap_res.scalars().all())
 
     logger.info(f"[AGENT RESPONSE] [EVIDENCE_ANALYST] Matter '{matter_id}' - Completed evaluation for '{current_dim}' | Total Mappings: {len(new_mapped_ids)}, Total Gaps: {len(new_gap_ids)}")
 
