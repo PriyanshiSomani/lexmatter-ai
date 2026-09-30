@@ -97,12 +97,14 @@ def build_matter_analysis_graph():
     builder.add_edge("verification_agent", "supervisor")
     builder.add_edge("human_review", END)
 
-    # 5. Compile with MemorySaver Checkpointer
+    # 5. Compile with MemorySaver Checkpointer & Interrupt Gate
     checkpointer = MemorySaver()
-    return builder.compile(checkpointer=checkpointer)
+    return builder.compile(checkpointer=checkpointer, interrupt_before=["human_review"])
 
 
 from backend.app.core.logger import get_logger
+from backend.app.models.audit import HumanReview
+from backend.app.core.id_generator import generate_id, PREFIX_HUMAN_REVIEW
 
 logger = get_logger("agents.workflow")
 
@@ -176,6 +178,61 @@ async def run_matter_analysis_workflow(
         f"Mapped Evidence: {len(final_state.get('mapped_evidence_ids', []))}, "
         f"Conflicts: {len(final_state.get('identified_conflict_ids', []))}, "
         f"Gaps: {len(final_state.get('identified_gap_ids', []))}, "
+        f"Human Review Required: {final_state.get('requires_human_review')}]"
+    )
+    return final_state
+
+
+async def resume_matter_analysis_workflow(
+    db: AsyncSession,
+    matter_id: str,
+    action: str,  # "ACCEPT", "REJECT", "OVERRIDE"
+    reviewer_id: str = "ATTORNEY_USER",
+    notes: Optional[str] = None,
+) -> MatterAnalysisState:
+    """
+    Resumes a paused LangGraph workflow following attorney human review submission.
+    Updates checkpoint state and re-invokes graph execution to completion.
+    """
+    logger.info(f"Resuming workflow for Matter '{matter_id}' following attorney decision '{action}' by reviewer '{reviewer_id}'...")
+
+    # Record HumanReview audit record
+    hr = HumanReview(
+        id=generate_id(PREFIX_HUMAN_REVIEW),
+        matter_id=matter_id,
+        target_type="WORKFLOW",
+        target_id=matter_id,
+        decision=action,
+        reviewer_comment=notes or f"Attorney submitted workflow action: {action}",
+        reviewer_id=reviewer_id,
+    )
+    db.add(hr)
+    await db.flush()
+
+    config = {
+        "configurable": {
+            "thread_id": f"matter_{matter_id}",
+            "db": db,
+        }
+    }
+
+    # Clear human review flag if accepted or overridden
+    is_cleared = action.upper() in ("ACCEPT", "OVERRIDE")
+    state_update = {
+        "requires_human_review": not is_cleared,
+        "human_review_reasons": [] if is_cleared else [f"Attorney rejected workflow execution: {notes or 'No details provided'}"],
+        "current_step": "human_review_completed",
+    }
+
+    matter_analysis_graph.update_state(config, state_update)
+
+    # Resume execution from checkpoint
+    logger.info(f"Re-invoking state graph for Matter '{matter_id}' after state update...")
+    final_state = await matter_analysis_graph.ainvoke(None, config=config)
+
+    logger.info(
+        f"Resumed workflow execution completed for Matter '{matter_id}' "
+        f"[Final Step: {final_state.get('current_step')}, "
         f"Human Review Required: {final_state.get('requires_human_review')}]"
     )
     return final_state

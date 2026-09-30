@@ -90,3 +90,56 @@ async def get_matter_agent_logs(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch agent audit logs: {str(e)}",
         )
+
+
+from typing import Optional
+from pydantic import BaseModel, Field
+from backend.app.agents.workflow import resume_matter_analysis_workflow
+
+
+class HumanReviewSubmission(BaseModel):
+    action: str = Field(..., description="ACCEPT, REJECT, or OVERRIDE")
+    reviewer_id: str = Field(default="ATTORNEY_USER", description="ID or email of reviewing attorney")
+    notes: Optional[str] = Field(default=None, description="Attorney review comments or justification notes")
+
+
+@router.post("/matters/{matter_id}/orchestration/review", status_code=status.HTTP_200_OK)
+async def submit_human_review_decision(
+    matter_id: str,
+    payload: HumanReviewSubmission,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Submit attorney human review decision (ACCEPT, REJECT, OVERRIDE) and resume paused workflow.
+    """
+    if payload.action.upper() not in ("ACCEPT", "REJECT", "OVERRIDE"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Action must be one of ACCEPT, REJECT, or OVERRIDE.",
+        )
+
+    try:
+        final_state = await resume_matter_analysis_workflow(
+            db=db,
+            matter_id=matter_id,
+            action=payload.action.upper(),
+            reviewer_id=payload.reviewer_id,
+            notes=payload.notes,
+        )
+
+        return {
+            "matter_id": matter_id,
+            "status": "PAUSED_FOR_REVIEW" if final_state.get("requires_human_review") else "COMPLETED",
+            "decision_recorded": payload.action.upper(),
+            "reviewer_id": payload.reviewer_id,
+            "current_step": final_state.get("current_step"),
+            "human_review": {
+                "required": final_state.get("requires_human_review", False),
+                "reasons": final_state.get("human_review_reasons", []),
+            },
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to submit human review decision and resume workflow: {str(e)}",
+        )
