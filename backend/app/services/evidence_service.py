@@ -182,34 +182,42 @@ class EvidenceService:
         # Index existing assertions by source_span_id
         span_to_asrt: Dict[str, SourceAssertion] = {a.source_span_id: a for a in assertions if a.source_span_id}
 
-        # 3. Match evidence for this dimension
-        matched_assertion: SourceAssertion | None = None
+        # 3. Match evidence for this dimension across multiple exhibits
+        matched_assertions: List[SourceAssertion] = []
+        seen_span_ids = set()
 
         # Step 3a: Direct Predicate Matching
         for asrt in assertions:
             matched_dim = self.PREDICATE_DIMENSION_MAP.get(asrt.predicate)
             if matched_dim == dimension or asrt.predicate == dimension:
-                matched_assertion = asrt
-                break
+                if asrt.source_span_id and asrt.source_span_id not in seen_span_ids:
+                    seen_span_ids.add(asrt.source_span_id)
+                    matched_assertions.append(asrt)
 
         # Step 3b: Assertion Value / Keyword Matching
-        if not matched_assertion:
-            for asrt in assertions:
-                obj_str = str(asrt.object_value)
-                if self.match_dimension_keywords(obj_str, dimension):
-                    matched_assertion = asrt
-                    break
+        for asrt in assertions:
+            if len(matched_assertions) >= 3:
+                break
+            obj_str = str(asrt.object_value)
+            if self.match_dimension_keywords(obj_str, dimension):
+                if asrt.source_span_id and asrt.source_span_id not in seen_span_ids:
+                    seen_span_ids.add(asrt.source_span_id)
+                    matched_assertions.append(asrt)
 
-        # Step 3c: Hybrid SourceSpan Keyword Fallback with Word-Boundary & Salutation Filtering
-        if not matched_assertion and spans:
+        # Step 3c: Hybrid SourceSpan Keyword Fallback across exhibits
+        if len(matched_assertions) < 3 and spans:
             for span in spans:
+                if len(matched_assertions) >= 3:
+                    break
+                if span.id in seen_span_ids:
+                    continue
                 if self.is_boilerplate_span(span.text_snippet):
                     continue
                 if self.match_dimension_keywords(span.text_snippet, dimension):
                     if span.id in span_to_asrt:
-                        matched_assertion = span_to_asrt[span.id]
+                        asrt = span_to_asrt[span.id]
                     else:
-                        new_asrt = SourceAssertion(
+                        asrt = SourceAssertion(
                             matter_id=matter_id,
                             source_span_id=span.id,
                             predicate=dimension,
@@ -221,38 +229,40 @@ class EvidenceService:
                             extraction_method="HYBRID_KEYWORD_SEARCH",
                             is_immutable=True,
                         )
-                        db.add(new_asrt)
+                        db.add(asrt)
                         await db.flush()
-                        span_to_asrt[span.id] = new_asrt
-                        assertions.append(new_asrt)
-                        matched_assertion = new_asrt
-                    break
+                        span_to_asrt[span.id] = asrt
+                        assertions.append(asrt)
+
+                    seen_span_ids.add(span.id)
+                    matched_assertions.append(asrt)
 
         mappings_created = 0
         gaps_created = 0
 
         # 4. Map evidence or record gap for target requirements
-        if matched_assertion:
-            for app, req_version, req in target_rows:
-                map_stmt = select(EvidenceMapping).where(
-                    EvidenceMapping.matter_id == matter_id,
-                    EvidenceMapping.source_assertion_id == matched_assertion.id,
-                    EvidenceMapping.requirement_version_id == req_version.id,
-                    EvidenceMapping.target_dimension == dimension,
-                )
-                map_res = await db.execute(map_stmt)
-                if not map_res.scalar_one_or_none():
-                    ev_mapping = EvidenceMapping(
-                        matter_id=matter_id,
-                        source_assertion_id=matched_assertion.id,
-                        requirement_version_id=req_version.id,
-                        relationship="SUPPORTS",
-                        target_dimension=dimension,
-                        relevance_score=0.95,
-                        analysis_notes=f"Evidentiary support located for requirement dimension '{dimension}'.",
+        if matched_assertions:
+            for matched_asrt in matched_assertions:
+                for app, req_version, req in target_rows:
+                    map_stmt = select(EvidenceMapping).where(
+                        EvidenceMapping.matter_id == matter_id,
+                        EvidenceMapping.source_assertion_id == matched_asrt.id,
+                        EvidenceMapping.requirement_version_id == req_version.id,
+                        EvidenceMapping.target_dimension == dimension,
                     )
-                    db.add(ev_mapping)
-                    mappings_created += 1
+                    map_res = await db.execute(map_stmt)
+                    if not map_res.scalar_one_or_none():
+                        ev_mapping = EvidenceMapping(
+                            matter_id=matter_id,
+                            source_assertion_id=matched_asrt.id,
+                            requirement_version_id=req_version.id,
+                            relationship="SUPPORTS",
+                            target_dimension=dimension,
+                            relevance_score=0.95,
+                            analysis_notes=f"Evidentiary support located for requirement dimension '{dimension}'.",
+                        )
+                        db.add(ev_mapping)
+                        mappings_created += 1
         else:
             for app, req_version, req in target_rows:
                 gap_stmt = select(EvidenceGap).where(
