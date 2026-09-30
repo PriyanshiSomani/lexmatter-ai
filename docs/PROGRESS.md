@@ -73,18 +73,18 @@
 
 | ADR | Title | Key Decision |
 | :--- | :--- | :--- |
-| `ADR-001` | Architecture Pattern | FastAPI + Async SQLAlchemy 2.0 + LangGraph Multi-Agent Engine |
-| `ADR-002` | Database Schema Design | Two-World Architecture (Immutable Raw Source vs Consolidated Knowledge) |
-| `ADR-003` | Document Ingestion Strategy | PyMuPDF with layout-aware structural block preservation |
-| `ADR-004` | Retrieval Strategy | Reciprocal Rank Fusion (RRF k=60) combining Vector Similarity & Sparse BM25 |
-| `ADR-005` | Requirements Modeling | Hierarchical Case Type -> Visa Requirement -> Requirement Dimension schema |
-| `ADR-006` | Multi-Agent Architecture | Supervisor + Specialized Agent Nodes with explicit state routing |
+| `ADR-001` | Architecture Pattern & Technology Stack | FastAPI + Async SQLAlchemy 2.0 + LangGraph Multi-Agent Engine |
+| `ADR-002` | Two-World Database Architecture | Immutable Raw Source Claims vs Consolidated Knowledge & Legal Analysis |
+| `ADR-003` | Document Ingestion & Structural Parsing | PyMuPDF structural block preservation, bounding boxes & exhibit classification |
+| `ADR-004` | Hybrid Retrieval Strategy | Reciprocal Rank Fusion (RRF k=60) combining Vector Similarity & Sparse BM25 |
+| `ADR-005` | Legal Domain Ontology & Requirements | Hierarchical Case Type -> Visa Requirement -> Requirement Dimension schema |
+| `ADR-006` | Multi-Agent Topology & State Graph | Supervisor + Specialized Agent Nodes with explicit state routing |
 | `ADR-007` | Provenance Audit Lineage | Immutable audit log mapping facts to exact source text character ranges |
-| `ADR-008` | Frontend Framework | Next.js 14 App Router + Tailwind CSS + React Query |
-| `ADR-009` | ID Generation Strategy | Typed ULIDs across all database entities (`mat_...`, `doc_...`, `span_...`) |
-| `ADR-010` | Non-Adjudicative Guardrails | Mandatory conditional, non-adjudicative phrasing in legal gap reporting |
-| `ADR-011` | Docker Deployment Strategy | Containerized FastAPI backend, Postgres/pgvector, and Next.js frontend |
-| `ADR-012` | Testing Strategy | Pytest suite with isolated transactional database fixtures |
+| `ADR-008` | Frontend Architecture & Client State | Next.js 14 App Router + Tailwind CSS + React Query |
+| `ADR-009` | Global Typed ULID Identification | Standardized typed ULIDs across all database entities (`mat_...`, `doc_...`, `span_...`) |
+| `ADR-010` | Non-Adjudicative Guardrails & Phrasing | Mandatory conditional, non-adjudicative phrasing in legal gap reporting |
+| `ADR-011` | Containerized Deployment Architecture | Containerized FastAPI backend, Postgres/pgvector, and Next.js frontend |
+| `ADR-012` | Transactional Testing & Verification | Pytest suite with isolated transactional database fixtures & vector fallback |
 | `ADR-013` | Per-Dimension Evidence Evaluation | Explicit `db.flush()` and per-dimension support scoring logic |
 | `ADR-014` | Four-Tier Verification Hierarchy | Tiered verification cascade from exact lexical to LLM adjudication |
 | `ADR-015` | Persistent Checkpointing & Human Review Gate | LangGraph `interrupt_before` workflow pause and attorney review resume endpoint |
