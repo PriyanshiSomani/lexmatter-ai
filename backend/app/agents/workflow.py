@@ -15,7 +15,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.runnables import RunnableConfig
 
 from backend.app.agents.state import MatterAnalysisState, create_initial_matter_state
-from backend.app.agents.supervisor import route_next, supervisor_node
+from backend.app.agents.supervisor import route_next, supervisor_node, async_supervisor_node
 from backend.app.agents.nodes.evidence_node import evidence_analyst_node
 from backend.app.agents.nodes.consistency_node import consistency_analyst_node
 from backend.app.agents.nodes.research_node import research_agent_node
@@ -24,6 +24,11 @@ from backend.app.models.legal import RequirementVersion, RequirementApplicabilit
 
 
 # --- Node Wrappers to Inject AsyncSession from RunnableConfig ---
+
+async def call_supervisor_node(state: MatterAnalysisState, config: RunnableConfig) -> Dict[str, Any]:
+    db: Optional[AsyncSession] = config.get("configurable", {}).get("db") if config else None
+    return await async_supervisor_node(state, db)
+
 
 async def call_evidence_analyst(state: MatterAnalysisState, config: RunnableConfig) -> Dict[str, Any]:
     db: AsyncSession = config["configurable"]["db"]
@@ -66,7 +71,7 @@ def build_matter_analysis_graph():
     builder = StateGraph(MatterAnalysisState)
 
     # 1. Add Specialist Nodes
-    builder.add_node("supervisor", supervisor_node)
+    builder.add_node("supervisor", call_supervisor_node)
     builder.add_node("evidence_analyst", call_evidence_analyst)
     builder.add_node("consistency_analyst", call_consistency_analyst)
     builder.add_node("research_agent", call_research_agent)

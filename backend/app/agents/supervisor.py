@@ -68,7 +68,7 @@ def route_next(state: MatterAnalysisState) -> str:
 
 def supervisor_node(state: MatterAnalysisState) -> Dict[str, Any]:
     """
-    Supervisor node wrapper that records routing decisions in state.
+    Synchronous Supervisor node wrapper that records routing decisions in state.
     """
     next_step = route_next(state)
     logger.debug(f"[SUPERVISOR] Node evaluated. Recorded next step: '{next_step}'")
@@ -76,3 +76,52 @@ def supervisor_node(state: MatterAnalysisState) -> Dict[str, Any]:
         "current_step": "supervisor",
         "next_agent": next_step,
     }
+
+
+async def async_supervisor_node(state: MatterAnalysisState, db: Any = None) -> Dict[str, Any]:
+    """
+    Asynchronous Supervisor node wrapper that integrates PostgreSQL case memory.
+    Reads prior case memory notes, evaluates routing decisions, and persists progress summary.
+    """
+    matter_id = state.get("matter_id", "unknown")
+    next_step = route_next(state)
+
+    if db is not None:
+        try:
+            from backend.app.services.memory_service import get_case_memory, upsert_case_memory
+
+            # Read existing case memory for context
+            existing_mem = await get_case_memory(db, matter_id, "supervisor_summary")
+            if existing_mem:
+                logger.info(f"[SUPERVISOR] Loaded case memory for Matter '{matter_id}': key='supervisor_summary'")
+
+            # Record updated progress log in case memory
+            unprocessed_cnt = len(state.get("unprocessed_dimensions", []))
+            summary_content = (
+                f"Iteration: {state.get('iteration_count', 0)}\n"
+                f"Next Agent: {next_step}\n"
+                f"Unprocessed Dimensions Remaining: {unprocessed_cnt}\n"
+                f"Consistency Checked: {state.get('consistency_check_completed', False)}\n"
+                f"Research Completed: {state.get('research_completed', False)}\n"
+                f"Verification Completed: {state.get('verification_completed', False)}"
+            )
+            await upsert_case_memory(
+                db=db,
+                matter_id=matter_id,
+                memory_key="supervisor_summary",
+                content=summary_content,
+                meta_data={
+                    "current_step": "supervisor",
+                    "next_agent": next_step,
+                    "iteration": state.get("iteration_count", 0),
+                },
+            )
+            logger.info(f"[SUPERVISOR] Persisted routing decision memory for Matter '{matter_id}'")
+        except Exception as exc:
+            logger.warning(f"[SUPERVISOR] Failed to persist case memory for Matter '{matter_id}': {exc}")
+
+    return {
+        "current_step": "supervisor",
+        "next_agent": next_step,
+    }
+
