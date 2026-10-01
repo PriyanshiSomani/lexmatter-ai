@@ -67,6 +67,8 @@ class Matter(Base):
     agent_runs: Mapped[List["AgentRun"]] = relationship("AgentRun", back_populates="matter", cascade="all, delete-orphan")
     human_reviews: Mapped[List["HumanReview"]] = relationship("HumanReview", back_populates="matter", cascade="all, delete-orphan")
     audit_events: Mapped[List["AuditEvent"]] = relationship("AuditEvent", back_populates="matter", cascade="all, delete-orphan")
+    case_memories: Mapped[List["CaseMemory"]] = relationship("CaseMemory", back_populates="matter", cascade="all, delete-orphan")
+
 
     __table_args__ = (
         Index("idx_matters_type_status", "matter_type", "case_type", "status"),

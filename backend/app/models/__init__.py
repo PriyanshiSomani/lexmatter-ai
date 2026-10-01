@@ -49,6 +49,9 @@ from backend.app.models.audit import (
     AuditEvent,
 )
 
+# Layer 7: Case Memory Layer
+from backend.app.models.memory import CaseMemory
+
 __all__ = [
     # Layer 1
     "Matter",
@@ -78,4 +81,7 @@ __all__ = [
     "AgentRun",
     "HumanReview",
     "AuditEvent",
+    # Layer 7
+    "CaseMemory",
 ]
+
