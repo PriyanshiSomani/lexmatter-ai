@@ -20,3 +20,5 @@ This directory documents the foundational design and architectural decisions mad
 | **ADR-014** | [4-Tier Verification Hierarchy & Provenance Integrity](ADR-014-four-tier-verification-hierarchy.md) | Accepted | 2026-09-26 |
 | **ADR-015** | [Persistent Checkpointing & Interrupt/Resume Human-Review Gate](ADR-015-persistent-checkpointing-human-review-gate.md) | Accepted | 2026-09-26 |
 | **ADR-016** | [Dual-Engine Database Fallback & Vector Search Degradation Strategy](ADR-016-dual-engine-database-fallback-strategy.md) | Accepted | 2026-09-26 |
+| **ADR-017** | [PostgreSQL-Backed Case-Scoped Memory Tool](ADR-017-postgres-case-memory-tool.md) | Accepted | 2026-10-01 |
+
