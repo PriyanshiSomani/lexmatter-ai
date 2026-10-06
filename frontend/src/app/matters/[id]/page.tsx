@@ -1,14 +1,14 @@
 /**
  * LexMatter AI — Main Matter Workspace Page
  * Phase 12: Frontend Integration & UI
- * Split-screen attorney workspace with separate Technical Audit tab
+ * Split-screen attorney workspace with persistent review gate and quick analysis trigger
  */
 
 "use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Scale, ArrowLeft, ShieldCheck, Cpu, RefreshCw } from "lucide-react";
+import { Scale, ArrowLeft, ShieldCheck, Cpu, RefreshCw, Play, Loader2, Sparkles } from "lucide-react";
 
 import { DocumentUploader } from "../../../components/DocumentUploader";
 import { DocumentViewer } from "../../../components/DocumentViewer";
@@ -16,6 +16,7 @@ import { RequirementMatrix } from "../../../components/RequirementMatrix";
 import { ConflictResolver } from "../../../components/ConflictResolver";
 import { ReportExporter } from "../../../components/ReportExporter";
 import { AgentWorkflowPanel } from "../../../components/AgentWorkflowPanel";
+import { HumanReviewBanner } from "../../../components/HumanReviewBanner";
 
 import {
   fetchMatterDocuments,
@@ -23,23 +24,33 @@ import {
   fetchEvidenceMappings,
   fetchConflicts,
   fetchEvidenceGaps,
+  triggerAgentOrchestration,
   DocumentItem,
   RequirementItem,
   EvidenceMappingItem,
   ConflictItem,
   EvidenceGapItem,
+  AgentOrchestrationResponse,
+  HumanReviewDecisionResponse,
 } from "../../../lib/api";
 
 export default function MatterWorkspace({ params }: { params: { id: string } }) {
   const matterId = params.id;
   const [activeTab, setActiveTab] = useState<"legal" | "technical">("legal");
   const [loading, setLoading] = useState(true);
+  const [runningAnalysis, setRunningAnalysis] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [requirements, setRequirements] = useState<RequirementItem[]>([]);
   const [evidenceMappings, setEvidenceMappings] = useState<EvidenceMappingItem[]>([]);
   const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
   const [evidenceGaps, setEvidenceGaps] = useState<EvidenceGapItem[]>([]);
+
+  // Persistent workflow & human review lifecycle state
+  const [workflowStatus, setWorkflowStatus] = useState<"COMPLETED" | "PAUSED_FOR_REVIEW" | null>(null);
+  const [isReviewRequired, setIsReviewRequired] = useState(false);
+  const [reviewReasons, setReviewReasons] = useState<string[]>([]);
 
   // Cross-component interaction state for attorney document citation inspection
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
@@ -70,6 +81,30 @@ export default function MatterWorkspace({ params }: { params: { id: string } }) 
   useEffect(() => {
     loadMatterData();
   }, [matterId]);
+
+  const handleRunAnalysis = async () => {
+    setRunningAnalysis(true);
+    setAnalysisError(null);
+
+    try {
+      const res: AgentOrchestrationResponse = await triggerAgentOrchestration(matterId, "L1B");
+      setWorkflowStatus(res.status);
+      setIsReviewRequired(res.human_review.required);
+      setReviewReasons(res.human_review.reasons || []);
+      await loadMatterData();
+    } catch (err: any) {
+      setAnalysisError(err.message || "Failed to execute multi-agent analysis.");
+    } finally {
+      setRunningAnalysis(false);
+    }
+  };
+
+  const handleDecisionSubmitted = async (res: HumanReviewDecisionResponse) => {
+    setWorkflowStatus(res.status);
+    setIsReviewRequired(res.human_review.required);
+    setReviewReasons(res.human_review.reasons || []);
+    await loadMatterData();
+  };
 
   const handleSelectCitation = (docId?: string, spanId?: string) => {
     if (docId) setSelectedDocId(docId);
@@ -119,19 +154,52 @@ export default function MatterWorkspace({ params }: { params: { id: string } }) 
           </button>
         </div>
 
-        <button
-          onClick={loadMatterData}
-          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition-colors text-xs flex items-center gap-1"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
-        </button>
+        {/* Primary Action Buttons */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRunAnalysis}
+            disabled={runningAnalysis}
+            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50"
+          >
+            {runningAnalysis ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5 text-blue-200" />
+            )}
+            {runningAnalysis ? "Analyzing Case..." : "Run AI Analysis"}
+          </button>
+
+          <button
+            onClick={loadMatterData}
+            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition-colors text-xs flex items-center gap-1"
+            title="Refresh matter records"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </header>
 
       {/* Main Workspace Body */}
-      <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto">
+      <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto space-y-4">
+        {/* Persistent Attorney Review Banner */}
+        <HumanReviewBanner
+          matterId={matterId}
+          isReviewRequired={isReviewRequired}
+          reviewReasons={reviewReasons}
+          workflowStatus={workflowStatus}
+          onDecisionSubmitted={handleDecisionSubmitted}
+        />
+
+        {analysisError && (
+          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs flex items-center justify-between">
+            <span><strong>Analysis Error:</strong> {analysisError}</span>
+            <button onClick={() => setAnalysisError(null)} className="text-rose-600 hover:text-rose-900 font-bold ml-2">Dismiss</button>
+          </div>
+        )}
+
         {activeTab === "legal" ? (
           /* TAB 1: Clean Attorney Legal Workspace (Split-Screen) */
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-120px)]">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-180px)]">
             {/* Left Column (5 Cols): PDF Document Uploader & Source Viewer */}
             <div className="lg:col-span-5 flex flex-col gap-4 h-full overflow-hidden">
               <DocumentUploader
