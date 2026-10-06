@@ -54,11 +54,19 @@ async def call_verification_agent(state: MatterAnalysisState, config: RunnableCo
 
 async def human_review_node(state: MatterAnalysisState, config: RunnableConfig) -> Dict[str, Any]:
     """
-    Human Review interrupt gate. Updates step status.
+    Human Review interrupt gate.
+
+    On first entry (before attorney decision), the graph pauses via interrupt_before
+    so this node body never executes until resume.
+
+    On resume, the attorney's decision has already been written into state by
+    resume_matter_analysis_workflow() via update_state(). This node reads back
+    whatever the resume function set rather than overwriting it.
     """
     return {
         "current_step": "human_review",
-        "requires_human_review": True,
+        "requires_human_review": state.get("requires_human_review", True),
+        "human_review_reasons": state.get("human_review_reasons", []),
     }
 
 
