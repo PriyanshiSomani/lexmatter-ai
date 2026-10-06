@@ -70,6 +70,21 @@ async def human_review_node(state: MatterAnalysisState, config: RunnableConfig) 
     }
 
 
+# --- Post-Review Conditional Router ---
+
+def route_after_review(state: MatterAnalysisState) -> str:
+    """
+    Routes the workflow after the human review node executes on resume.
+    ACCEPT/OVERRIDE → back to supervisor for downstream work (e.g., report synthesis).
+    REJECT → terminate the workflow.
+    """
+    if state.get("requires_human_review", True):
+        # Attorney rejected or review is still pending — end the workflow
+        return "__end__"
+    # Attorney accepted/overrode — return to supervisor for remaining phases
+    return "supervisor"
+
+
 # --- Graph Assembly & Compilation ---
 
 def build_matter_analysis_graph():
@@ -108,9 +123,20 @@ def build_matter_analysis_graph():
     builder.add_edge("consistency_analyst", "supervisor")
     builder.add_edge("research_agent", "supervisor")
     builder.add_edge("verification_agent", "supervisor")
-    builder.add_edge("human_review", END)
 
-    # 5. Compile with MemorySaver Checkpointer & Interrupt Gate
+    # 5. Add Conditional Edge from Human Review Gate
+    #    ACCEPT/OVERRIDE → supervisor (for downstream work e.g. report synthesis)
+    #    REJECT → END (terminate workflow)
+    builder.add_conditional_edges(
+        "human_review",
+        route_after_review,
+        {
+            "supervisor": "supervisor",
+            "__end__": END,
+        },
+    )
+
+    # 6. Compile with MemorySaver Checkpointer & Interrupt Gate
     checkpointer = MemorySaver()
     return builder.compile(checkpointer=checkpointer, interrupt_before=["human_review"])
 
