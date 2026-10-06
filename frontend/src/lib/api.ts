@@ -248,3 +248,39 @@ export async function fetchEntityLineage(entityId: string): Promise<LineageRespo
   if (!res.ok) throw new Error("Lineage fetch failed");
   return res.json();
 }
+
+export interface HumanReviewDecisionResponse {
+  matter_id: string;
+  status: "COMPLETED" | "PAUSED_FOR_REVIEW";
+  decision_recorded: "ACCEPT" | "REJECT" | "OVERRIDE";
+  reviewer_id: string;
+  current_step: string;
+  human_review: {
+    required: boolean;
+    reasons: string[];
+  };
+}
+
+export async function submitHumanReview(
+  matterId: string,
+  action: "ACCEPT" | "REJECT" | "OVERRIDE",
+  notes?: string,
+  reviewerId: string = "ATTORNEY_USER"
+): Promise<HumanReviewDecisionResponse> {
+  const res = await fetch(`${API_BASE_URL}/matters/${matterId}/orchestration/review`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action,
+      reviewer_id: reviewerId,
+      notes: notes || undefined,
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || "Failed to submit human review decision");
+  }
+
+  return res.json();
+}
