@@ -21,4 +21,6 @@ This directory documents the foundational design and architectural decisions mad
 | **ADR-015** | [Persistent Checkpointing & Interrupt/Resume Human-Review Gate](ADR-015-persistent-checkpointing-human-review-gate.md) | Accepted | 2026-09-26 |
 | **ADR-016** | [Dual-Engine Database Fallback & Vector Search Degradation Strategy](ADR-016-dual-engine-database-fallback-strategy.md) | Accepted | 2026-09-26 |
 | **ADR-017** | [PostgreSQL-Backed Case-Scoped Memory Tool](ADR-017-postgres-case-memory-tool.md) | Accepted | 2026-10-01 |
+| **ADR-018** | [Interactive Attorney Review UI & State Lifecycle Management](ADR-018-attorney-review-workflow-ui.md) | Accepted | 2026-10-06 |
+
 

@@ -89,6 +89,9 @@
 | `ADR-014` | Four-Tier Verification Hierarchy | Tiered verification cascade from exact lexical to LLM adjudication |
 | `ADR-015` | Persistent Checkpointing & Human Review Gate | LangGraph `interrupt_before` workflow pause and attorney review resume endpoint |
 | `ADR-016` | Dual-Engine Database Fallback | Automatic fallback between PostgreSQL/pgvector and SQLite memory engines |
+| `ADR-017` | PostgreSQL-Backed Case Memory Tool | Persistent case-scoped key-value memory tool for agent workflow context |
+| `ADR-018` | Interactive Attorney Review UI | Persistent review gate banner, override modal, and main workspace trigger |
+
 
 ---
 
