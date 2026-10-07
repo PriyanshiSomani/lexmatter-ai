@@ -85,11 +85,61 @@ def route_after_review(state: MatterAnalysisState) -> str:
     return "supervisor"
 
 
+import os
+from backend.app.core.logger import get_logger
+from backend.app.models.audit import HumanReview
+from backend.app.core.id_generator import generate_id, PREFIX_HUMAN_REVIEW
+
+logger = get_logger("agents.workflow")
+
+# --- Checkpointer Provider ---
+
+_shared_memory_saver = MemorySaver()
+_pg_checkpointer = None
+
+
+async def get_checkpointer():
+    """
+    Returns an async persistent checkpointer based on database configuration.
+    If PostgreSQL is active and USE_SQLITE is false, initializes AsyncPostgresSaver.
+    Falls back gracefully to in-memory MemorySaver for test fixtures and SQLite mode.
+    """
+    global _pg_checkpointer
+    if _pg_checkpointer is not None:
+        return _pg_checkpointer
+
+    use_sqlite = os.getenv("USE_SQLITE", "true").lower() == "true"
+    db_url = os.getenv("DATABASE_URL", "")
+
+    if not use_sqlite and "postgresql" in db_url:
+        try:
+            from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+            from psycopg_pool import AsyncConnectionPool
+
+            # Format connection string for psycopg
+            sync_url = (
+                db_url.replace("postgresql+asyncpg://", "postgresql://")
+                .replace("postgresql+psycopg://", "postgresql://")
+            )
+            pool = AsyncConnectionPool(conninfo=sync_url, max_size=10, open=False)
+            await pool.open()
+            saver = AsyncPostgresSaver(pool)
+            await saver.setup()
+            _pg_checkpointer = saver
+            logger.info("Successfully initialized PostgreSQL persistent LangGraph checkpointer (AsyncPostgresSaver).")
+            return _pg_checkpointer
+        except Exception as exc:
+            logger.warning(f"Could not initialize AsyncPostgresSaver ({exc}). Falling back to in-memory checkpointer.")
+
+    return _shared_memory_saver
+
+
 # --- Graph Assembly & Compilation ---
 
-def build_matter_analysis_graph():
+def build_matter_analysis_graph(checkpointer=None):
     """
     Constructs and compiles the StateGraph for matter intelligence analysis.
+    Accepts an optional checkpointer (defaults to shared MemorySaver).
     """
     builder = StateGraph(MatterAnalysisState)
 
@@ -136,20 +186,14 @@ def build_matter_analysis_graph():
         },
     )
 
-    # 6. Compile with MemorySaver Checkpointer & Interrupt Gate
-    checkpointer = MemorySaver()
-    return builder.compile(checkpointer=checkpointer, interrupt_before=["human_review"])
+    # 6. Compile with Checkpointer & Interrupt Gate
+    active_checkpointer = checkpointer if checkpointer is not None else _shared_memory_saver
+    return builder.compile(checkpointer=active_checkpointer, interrupt_before=["human_review"])
 
 
-from backend.app.core.logger import get_logger
-from backend.app.models.audit import HumanReview
-from backend.app.core.id_generator import generate_id, PREFIX_HUMAN_REVIEW
-
-logger = get_logger("agents.workflow")
-
-
-# Singleton compiled graph instance
+# Singleton compiled graph instance for backward compatibility & sync contexts
 matter_analysis_graph = build_matter_analysis_graph()
+
 
 
 async def run_matter_analysis_workflow(
@@ -207,9 +251,11 @@ async def run_matter_analysis_workflow(
         }
     }
 
-    # 4. Invoke LangGraph workflow
+    # 4. Invoke LangGraph workflow with persistent checkpointer
+    checkpointer = await get_checkpointer()
+    graph = build_matter_analysis_graph(checkpointer=checkpointer)
     logger.info(f"Executing LangGraph state graph for Matter '{matter_id}'...")
-    final_state = await matter_analysis_graph.ainvoke(initial_state, config=config)
+    final_state = await graph.ainvoke(initial_state, config=config)
 
     logger.info(
         f"Multi-agent workflow execution completed for Matter '{matter_id}' "
@@ -263,11 +309,13 @@ async def resume_matter_analysis_workflow(
         "current_step": "human_review_completed",
     }
 
-    matter_analysis_graph.update_state(config, state_update)
+    checkpointer = await get_checkpointer()
+    graph = build_matter_analysis_graph(checkpointer=checkpointer)
+    graph.update_state(config, state_update)
 
     # Resume execution from checkpoint
     logger.info(f"Re-invoking state graph for Matter '{matter_id}' after state update...")
-    final_state = await matter_analysis_graph.ainvoke(None, config=config)
+    final_state = await graph.ainvoke(None, config=config)
 
     logger.info(
         f"Resumed workflow execution completed for Matter '{matter_id}' "
