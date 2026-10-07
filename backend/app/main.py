@@ -30,6 +30,9 @@ async def lifespan(app: FastAPI):
     try:
         await init_db()
         logger.info("Database connection & ORM tables initialized successfully.")
+        # Initialize LangGraph persistent checkpointer (AsyncPostgresSaver) if in Postgres mode
+        from backend.app.agents.workflow import get_checkpointer
+        await get_checkpointer()
     except Exception as e:
         logger.warning(f"Primary database connection failed ({e}). Switching to local SQLite engine...")
         import backend.app.core.db as db_mod
