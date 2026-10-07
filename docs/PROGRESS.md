@@ -59,9 +59,9 @@
 * **Finding:** Previous evidence engine stopped after finding the first matching span per dimension, missing supporting evidence across multiple exhibits.
 * **Fix:** Enhanced `evaluate_dimension_evidence` to remove single-span `break` constraints, gathering up to **3 distinct corroborating evidence spans** per dimension across all uploaded exhibits (e.g., Form I-129, Support Letter, Tax Returns, Foreign Employment Verification).
 
-### 4. Persistent Checkpointing & Human Review Interrupt/Resume Workflow (Gap 3 / Enhancement B)
-* **Finding:** Long-running legal workflows required a human-in-the-loop gate allowing attorneys to review analysis before finalizing reports.
-* **Fix:** Integrated `builder.compile(interrupt_before=["human_review"])` in LangGraph (`workflow.py`), added `resume_matter_analysis_workflow()`, created `HumanReview` audit model, and exposed `POST /matters/{matter_id}/orchestration/review` for seamless attorney decision handling (`ACCEPT`, `REJECT`, `OVERRIDE`). Documented in `ADR-015`.
+### 4. Persistent PostgreSQL Checkpointing & Human Review Interrupt/Resume Workflow (Gap 3 / Enhancement B)
+* **Finding:** In-memory `MemorySaver()` checkpointer caused workflow state checkpoints to be lost upon application restarts, container redeployments, or multi-worker failover during long attorney review windows.
+* **Fix:** Implemented `get_checkpointer()` provider in `workflow.py` supporting `AsyncPostgresSaver` backed by connection pooling for production PostgreSQL, auto-initialized checkpoint tables in application `lifespan` (`main.py`), and maintained graceful `MemorySaver()` fallback for fast in-memory test fixtures. Documented in `ADR-015`.
 
 ### 5. Dual-Engine Database Fallback Strategy
 * **Finding:** Test environments without active PostgreSQL + pgvector databases required fallback execution.
@@ -87,7 +87,7 @@
 | `ADR-012` | Transactional Testing & Verification | Pytest suite with isolated transactional database fixtures & vector fallback |
 | `ADR-013` | Per-Dimension Evidence Evaluation | Explicit `db.flush()` and per-dimension support scoring logic |
 | `ADR-014` | Four-Tier Verification Hierarchy | Tiered verification cascade from exact lexical to LLM adjudication |
-| `ADR-015` | Persistent Checkpointing & Human Review Gate | LangGraph `interrupt_before` workflow pause and attorney review resume endpoint |
+| `ADR-015` | Persistent Checkpointing & Human Review Gate | LangGraph `AsyncPostgresSaver` persistent checkpointing, interrupt gate, and attorney resume endpoint |
 | `ADR-016` | Dual-Engine Database Fallback | Automatic fallback between PostgreSQL/pgvector and SQLite memory engines |
 | `ADR-017` | PostgreSQL-Backed Case Memory Tool | Persistent case-scoped key-value memory tool for agent workflow context |
 | `ADR-018` | Interactive Attorney Review UI | Persistent review gate banner, override modal, and main workspace trigger |
@@ -108,8 +108,9 @@
 
 ## 6. Project Verification & Test Results
 
-* **Unit Test Pass Rate:** **28/28 passed** (100% success rate across all test suites).
+* **Unit Test Pass Rate:** **35/35 passed** (100% success rate across all test suites including checkpointer persistence).
 * **Multi-Span Extraction Benchmark:** 58 total evidence mappings extracted across 5 uploaded petition exhibits with 100% semantic verification pass rate.
-* **Human Review Integration:** Successfully verified state graph pausing at `human_review_node` and resuming upon attorney submission via `POST /matters/{matter_id}/orchestration/review`.
+* **Human Review Integration:** Successfully verified state graph pausing at `human_review_node`, persistent checkpoint serialization, and resuming upon attorney submission via `POST /matters/{matter_id}/orchestration/review`.
+
 
 ---
