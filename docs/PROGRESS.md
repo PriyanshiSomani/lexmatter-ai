@@ -69,8 +69,8 @@
 * **Fix:** Implemented in-memory SQLite fallback with vector simulation for isolated test suites while preserving production PostgreSQL/pgvector optimizations. Documented in `ADR-016`.
 
 ### 6. Hierarchical Multi-Tier Agent Memory & Progressive Disclosure (Phase 15)
-* **Finding:** Monolithic prompt rule files consumed 4,200+ baseline tokens per turn, diluting attention across unrelated domains.
-* **Fix:** Implemented tiered architecture with a compact `GEMINI.md` root router, modular `.agents/rules/`, and progressive `.agents/memory/` topic guides (`tools/`, `domain/`), reducing baseline context token overhead by ~94.7% (ADR-019).
+* **Finding:** Monolithic prompt rule files consumed 5,280+ baseline tokens per turn, diluting attention across unrelated domains.
+* **Fix:** Implemented tiered architecture with a compact `GEMINI.md` root router, modular `.agents/rules/`, and progressive `.agents/memory/` topic guides (`tools/`, `domain/`), reducing baseline context token overhead by ~87.1% (ADR-019).
 
 ---
 

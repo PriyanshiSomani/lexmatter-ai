@@ -54,7 +54,7 @@ lexmatter-ai/
 
 | Metric | Monolithic Baseline (Before) | Hierarchical Memory (After) | Impact |
 | :--- | :--- | :--- | :--- |
-| **Startup Prompt Tokens** | ~4,200 tokens / turn | **~220 tokens** (`GEMINI.md` + `memory.md`) | **~94.7% Reduction** |
+| **Startup Prompt Tokens** | ~5,280 tokens / turn | **~680 tokens** (`GEMINI.md` + `memory.md`) | **~87.1% Measured Reduction** |
 | **Instruction Adherence** | Prone to attention dilution across unrelated domains | Focused context tailored directly to the active task | Eliminates hallucinated cross-domain rules |
 | **Developer Onboarding** | 5–15 mins re-prompting setup commands per session | **Zero manual onboarding:** Instant tool-runbook retrieval | Increased developer velocity |
 | **Token Cost Efficiency** | High recurring overhead on idle turns | Pay-as-needed on targeted topic file reads | Significant cost savings at scale |
