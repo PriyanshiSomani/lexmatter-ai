@@ -22,5 +22,6 @@ This directory documents the foundational design and architectural decisions mad
 | **ADR-016** | [Dual-Engine Database Fallback & Vector Search Degradation Strategy](ADR-016-dual-engine-database-fallback-strategy.md) | Accepted | 2026-09-26 |
 | **ADR-017** | [PostgreSQL-Backed Case-Scoped Memory Tool](ADR-017-postgres-case-memory-tool.md) | Accepted | 2026-10-01 |
 | **ADR-018** | [Interactive Attorney Review UI & State Lifecycle Management](ADR-018-attorney-review-workflow-ui.md) | Accepted | 2026-10-06 |
+| **ADR-019** | [Hierarchical Multi-Tier Agent Memory & Progressive Disclosure Architecture](ADR-019-hierarchical-agent-memory-progressive-disclosure.md) | Accepted | 2026-10-08 |
 
 
