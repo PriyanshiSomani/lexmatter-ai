@@ -1,14 +1,14 @@
 # LexMatter AI — Project Progress & Handoff Document
 
-**Last Updated:** Phase 14 Complete — Production Enhancements & Architectural Improvements  
-**Repository State:** LexMatter AI fully operational end-to-end. 100% pass rate across all 28 unit test suites. Includes FastAPI backend, PostgreSQL pgvector DB, LangGraph multi-agent engine with human review interrupt/resume workflow, PyMuPDF PDF briefing exporter, calibrated provenance audit lineage tracer, Next.js React frontend, 4-tier verification hierarchy, multi-span corroborative evidence mapping, and Docker Compose deployment.
+**Last Updated:** Phase 15 Complete — Hierarchical Agent Memory & Progressive Disclosure Architecture  
+**Repository State:** LexMatter AI fully operational end-to-end. 100% pass rate across all 35 unit test suites. Includes FastAPI backend, PostgreSQL pgvector DB, LangGraph multi-agent engine with human review interrupt/resume workflow, PyMuPDF PDF briefing exporter, calibrated provenance audit lineage tracer, Next.js React frontend, 4-tier verification hierarchy, multi-span corroborative evidence mapping, Docker Compose deployment, and hierarchical progressive memory architecture (ADR-019).
 
 ---
 
 ## 1. Project Overview & Architectural Conventions
 
 * **Framework:** FastAPI + SQLAlchemy 2.0 (AsyncSession) + PostgreSQL (`pgvector`) + LangGraph + Next.js (React / Tailwind) + Docker Compose
-* **ID System:** Typed ULIDs across all entities (`mat_...`, `doc_...`, `span_...`, `fact_...`, `hrev_...`, etc.) via `app/core/id_generator.py`.
+* **ID System:** Typed ULIDs across all entities (`mat_...`, `doc_...`, `span_...`, `fact_...`, `hrev_...`, `mem_...`) via `app/core/id_generator.py`.
 * **Two-World Architecture:**
   * **World 1 (Immutable Source Data):** Raw document chunks, `SourceSpan` (with character ranges, bounding boxes, 768-dim embeddings), and `SourceAssertion` entities. Never updated once created.
   * **World 2 (Consolidated Knowledge):** `CanonicalFact`, `Conflict` (cross-document contradiction tracking), `EvidenceMapping`, and `EvidenceGap`.
@@ -34,7 +34,8 @@
 | **Phase 11** | Audit & Provenance Verification | ✅ Complete | `schemas/audit.py`, `audit_service.py`, `api/v1/audit.py`, `test_audit_engine.py` |
 | **Phase 12** | Frontend (Next.js / React) | ✅ Complete | `src/lib/api.ts`, `src/components/*`, `src/app/matters/[id]/page.tsx` |
 | **Phase 13** | E2E Testing & Portfolio Package | ✅ Complete | `docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile`, 27 Pytest Suites Passed |
-| **Phase 14** | Production Enhancements & ADRs | ✅ Complete | `evidence_service.py`, `verification_node.py`, `workflow.py`, `orchestration.py`, `ADR-013`..`ADR-016` |
+| **Phase 14** | Production Enhancements & ADRs | ✅ Complete | `evidence_service.py`, `verification_node.py`, `workflow.py`, `orchestration.py`, `ADR-013`..`ADR-018` |
+| **Phase 15** | Hierarchical Agent Memory & Rules | ✅ Complete | `GEMINI.md`, `.agents/rules/*`, `.agents/memory/*`, `ADR-019` |
 
 ---
 
@@ -67,6 +68,10 @@
 * **Finding:** Test environments without active PostgreSQL + pgvector databases required fallback execution.
 * **Fix:** Implemented in-memory SQLite fallback with vector simulation for isolated test suites while preserving production PostgreSQL/pgvector optimizations. Documented in `ADR-016`.
 
+### 6. Hierarchical Multi-Tier Agent Memory & Progressive Disclosure (Phase 15)
+* **Finding:** Monolithic prompt rule files consumed 4,200+ baseline tokens per turn, diluting attention across unrelated domains.
+* **Fix:** Implemented tiered architecture with a compact `GEMINI.md` root router, modular `.agents/rules/`, and progressive `.agents/memory/` topic guides (`tools/`, `domain/`), reducing baseline context token overhead by ~94.7% (ADR-019).
+
 ---
 
 ## 4. Architecture Decision Records (ADRs)
@@ -91,6 +96,7 @@
 | `ADR-016` | Dual-Engine Database Fallback | Automatic fallback between PostgreSQL/pgvector and SQLite memory engines |
 | `ADR-017` | PostgreSQL-Backed Case Memory Tool | Persistent case-scoped key-value memory tool for agent workflow context |
 | `ADR-018` | Interactive Attorney Review UI | Persistent review gate banner, override modal, and main workspace trigger |
+| `ADR-019` | Hierarchical Multi-Tier Agent Memory | Progressive disclosure memory hierarchy and pre-flight topic routing |
 
 
 ---
